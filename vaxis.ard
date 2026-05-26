@@ -1,4 +1,5 @@
 extern type Vaxis = "*vaxis.Vaxis"
+extern type Window = "vaxis.Window"
 
 extern fn new(title: Str) Vaxis!Str = "New"
 
@@ -6,8 +7,98 @@ extern fn close(vx: Vaxis) Void!Str = "Close"
 
 extern fn clear(vx: Vaxis) Void = "Clear"
 
-extern fn draw_text(vx: Vaxis, x: Int, y: Int, text: Str) Void = "DrawText"
-
 extern fn render(vx: Vaxis) Void!Str = "Render"
 
+extern fn refresh(vx: Vaxis) Void = "Refresh"
+
+extern fn bell(vx: Vaxis) Void = "Bell"
+
+extern fn set_title(vx: Vaxis, title: Str) Void = "SetTitle"
+
+extern fn hide_cursor(vx: Vaxis) Void = "HideCursor"
+
+extern fn show_cursor(vx: Vaxis, x: Int, y: Int) Void = "ShowCursor"
+
+extern fn suspend(vx: Vaxis) Void!Str = "Suspend"
+
+extern fn resume(vx: Vaxis) Void!Str = "Resume"
+
+extern fn terminal_id(vx: Vaxis) Str = "TerminalID"
+
+extern fn rendered_width(vx: Vaxis, text: Str) Int = "RenderedWidth"
+
+extern fn can_rgb(vx: Vaxis) Bool = "CanRGB"
+
+extern fn can_sixel(vx: Vaxis) Bool = "CanSixel"
+
+extern fn can_kitty_graphics(vx: Vaxis) Bool = "CanKittyGraphics"
+
+extern fn can_unicode_core(vx: Vaxis) Bool = "CanUnicodeCore"
+
+extern fn can_display_graphics(vx: Vaxis) Bool = "CanDisplayGraphics"
+
+extern fn notify(vx: Vaxis, title: Str, body: Str) Void = "Notify"
+
+extern fn clipboard_push(vx: Vaxis, text: Str) Void = "ClipboardPush"
+
 extern fn read_key(vx: Vaxis) Str!Str = "ReadKey"
+
+extern fn root(vx: Vaxis) Window = "Root"
+
+extern fn window(vx: Vaxis, x: Int, y: Int, width: Int, height: Int) Window = "RootWindow"
+
+extern fn subwindow(win: Window, x: Int, y: Int, width: Int, height: Int) Window = "Subwindow"
+
+extern fn window_width(win: Window) Int = "WindowWidth"
+
+extern fn window_height(win: Window) Int = "WindowHeight"
+
+extern fn window_clear(win: Window) Void = "WindowClear"
+
+extern fn window_draw_text(win: Window, x: Int, y: Int, text: Str) Void = "WindowDrawText"
+
+extern fn window_draw_text_style(
+  win: Window,
+  x: Int,
+  y: Int,
+  text: Str,
+  fg: Int,
+  bg: Int,
+  bold: Bool,
+  dim: Bool,
+  italic: Bool,
+  underline: Bool,
+  reverse: Bool,
+) Void = "WindowDrawTextStyle"
+
+extern fn window_fill(
+  win: Window,
+  text: Str,
+  fg: Int,
+  bg: Int,
+  bold: Bool,
+  dim: Bool,
+  italic: Bool,
+  underline: Bool,
+  reverse: Bool,
+) Void = "WindowFill"
+
+extern fn window_show_cursor(win: Window, x: Int, y: Int) Void = "WindowShowCursor"
+
+extern fn draw_text(vx: Vaxis, x: Int, y: Int, text: Str) Void = "DrawText"
+
+extern fn draw_text_style(
+  vx: Vaxis,
+  x: Int,
+  y: Int,
+  text: Str,
+  fg: Int,
+  bg: Int,
+  bold: Bool,
+  dim: Bool,
+  italic: Bool,
+  underline: Bool,
+  reverse: Bool,
+) Void = "DrawTextStyle"
+
+extern fn text_backspace(text: Str) Str = "TextBackspace"
