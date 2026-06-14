@@ -36,6 +36,20 @@ func UiColumn(children []ui.Widget) ui.Widget {
 	return ui.Column(children...)
 }
 
+func UiFlex(axis, mainAxisSize, mainAxisAlignment, crossAxisAlignment int, children []ui.Widget) ui.Widget {
+	return ui.Flex{
+		Axis:              ui.Axis(axis),
+		MainAxisSize:      ui.MainAxisSize(mainAxisSize),
+		MainAxisAlignment: ui.MainAxisAlignment(mainAxisAlignment),
+		CrossAxisAlignment: ui.CrossAxisAlignment(crossAxisAlignment),
+		Children:          children,
+	}
+}
+
+func UiPositioned(left, top int, child ui.Widget) ui.Widget {
+	return ui.Positioned{Left: left, Top: top, Child: child}
+}
+
 func UiCenter(child ui.Widget) ui.Widget {
 	return ui.Center(child)
 }

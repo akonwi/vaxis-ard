@@ -61,6 +61,41 @@ fn padding(all: Int, child: Widget) Widget { _padding(all, child) }
 fn expanded(child: Widget) Widget { _expanded(child) }
 fn sized_box(width: Int, height: Int, child: Widget) Widget { _sized_box(width, height, child) }
 
+// ── Flex (advanced) ───────────────────────────────────────────────────
+
+extern fn _flex(axis: Int, main_size: Int, main_align: Int, cross_align: Int, children: [Widget]) Widget = "UiFlex"
+
+let AXIS_HORIZONTAL = 0
+let AXIS_VERTICAL = 1
+let MAIN_SIZE_MAX = 0
+let MAIN_SIZE_MIN = 1
+let MAIN_ALIGN_START = 0
+let MAIN_ALIGN_END = 1
+let MAIN_ALIGN_CENTER = 2
+let MAIN_ALIGN_BETWEEN = 3
+let MAIN_ALIGN_AROUND = 4
+let MAIN_ALIGN_EVENLY = 5
+let CROSS_ALIGN_CENTER = 0
+let CROSS_ALIGN_START = 1
+let CROSS_ALIGN_END = 2
+let CROSS_ALIGN_STRETCH = 3
+
+fn flex(axis: Int, children: [Widget]) Widget {
+  _flex(axis, MAIN_SIZE_MAX, MAIN_ALIGN_START, CROSS_ALIGN_CENTER, children)
+}
+
+fn flex_stretch(axis: Int, children: [Widget]) Widget {
+  _flex(axis, MAIN_SIZE_MAX, MAIN_ALIGN_START, CROSS_ALIGN_STRETCH, children)
+}
+
+// ── Positioned ────────────────────────────────────────────────────────
+
+extern fn _positioned(left: Int, top: Int, child: Widget) Widget = "UiPositioned"
+
+fn positioned(left: Int, top: Int, child: Widget) Widget {
+  _positioned(left, top, child)
+}
+
 // ── DecoratedBox ──────────────────────────────────────────────────────
 
 extern fn _decorated_box(
