@@ -1,105 +1,49 @@
-extern type Terminal
+use vaxis
 
-extern fn tui_open() Terminal!Str = "TuiOpen"
+fn draw(mut app: vaxis::App, count: Int, message: Str) Void!Str {
+  mut win = app.root_window()
+  win.clear()
 
-extern fn tui_close(term: Terminal) Void!Str = "TuiClose"
+  let label = vaxis::default_style().with_bold(true)
+  let dim = vaxis::default_style().with_dim(true)
+  let plain = vaxis::default_style()
 
-extern fn tui_clear(term: Terminal) Void = "TuiClear"
+  win.write(2, 1, "Ard + Vaxis Counter", label)
+  win.write(2, 2, "────────────────────", dim)
+  win.write(2, 4, "Count: " + count.to_str(), plain)
+  win.write(2, 6, "↑/k/right/l/+ increments", dim)
+  win.write(2, 7, "↓/j/left/h/- decrements", dim)
+  win.write(2, 8, "r resets", dim)
+  win.write(2, 9, "q quits", dim)
+  win.write(2, 11, message, plain)
 
-extern fn tui_draw_text(term: Terminal, x: Int, y: Int, text: Str) Void = "TuiDrawText"
-
-extern fn tui_flush(term: Terminal) Void!Str = "TuiFlush"
-
-extern fn tui_read_key(term: Terminal) Str!Str = "TuiReadKey"
-
-fn draw(term: Terminal, count: Int, message: Str) Void!Str {
-  tui_clear(term)
-  tui_draw_text(term, 2, 1, "Ard + Vaxis Counter")
-  tui_draw_text(term, 2, 2, "────────────────────")
-  tui_draw_text(term, 2, 4, "Count: " + count.to_str())
-  tui_draw_text(term, 2, 6, "↑/k/right/l/+ increments")
-  tui_draw_text(term, 2, 7, "↓/j/left/h/- decrements")
-  tui_draw_text(term, 2, 8, "r resets")
-  tui_draw_text(term, 2, 9, "q quits")
-  tui_draw_text(term, 2, 11, message)
-  tui_flush(term)
+  try app.render()
+  Result::ok(())
 }
 
-fn run_counter(term: Terminal) Void!Str {
+fn run_counter(mut app: vaxis::App) Void!Str {
   mut count = 0
   mut message = "Use the keyboard to change the counter."
   mut running = true
 
   while running {
-    try draw(term, count, message)
-    let key = try tui_read_key(term)
-
-    mut handled = false
+    try draw(app, count, message)
+    let key = try app.read_key()
 
     if key == "q" {
       running = false
-      handled = true
-    }
-
-    if handled == false {
-      if key == "up" {
-        count = count + 1
-        message = "Incremented."
-        handled = true
-      }
-    }
-    if handled == false {
-      if key == "right" {
-        count = count + 1
-        message = "Incremented."
-        handled = true
-      }
-    }
-    if handled == false {
-      if key == "+" {
-        count = count + 1
-        message = "Incremented."
-        handled = true
-      }
-    }
-
-    if handled == false {
-      if key == "down" {
-        count = count - 1
-        message = "Decremented."
-        handled = true
-      }
-    }
-    if handled == false {
-      if key == "left" {
-        count = count - 1
-        message = "Decremented."
-        handled = true
-      }
-    }
-    if handled == false {
-      if key == "-" {
-        count = count - 1
-        message = "Decremented."
-        handled = true
-      }
-    }
-
-    if handled == false {
-      if key == "r" {
-        count = 0
-        message = "Reset."
-        handled = true
-      }
-    }
-
-    if handled == false {
-      if key == "redraw" {
-        handled = true
-      }
-    }
-
-    if handled == false {
+    } else if key == "up" or key == "right" or key == "+" {
+      count = count + 1
+      message = "Incremented."
+    } else if key == "down" or key == "left" or key == "-" {
+      count = count - 1
+      message = "Decremented."
+    } else if key == "r" {
+      count = 0
+      message = "Reset."
+    } else if key == "redraw" {
+      // just redraw
+    } else {
       message = "Unknown key: " + key
     }
   }
@@ -108,7 +52,7 @@ fn run_counter(term: Terminal) Void!Str {
 }
 
 fn main() Void {
-  let term = tui_open().expect("open terminal")
-  run_counter(term).expect("run counter")
-  tui_close(term).expect("close terminal")
+  mut app = vaxis::app_open("Counter").expect("open terminal")
+  run_counter(app).expect("run counter")
+  app.close().expect("close terminal")
 }

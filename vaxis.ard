@@ -1,104 +1,603 @@
-extern type Vaxis = "*vaxis.Vaxis"
-extern type Window = "vaxis.Window"
+// ─── Raw FFI ──────────────────────────────────────────────────────────
+// Thin, minimal Go companion. Only what Ard cannot do:
+//   - terminal I/O (raw mode, alt screen)
+//   - ANSI parsing & event multiplexing (requires Go select)
+//   - ANSI escape writing (diff renderer)
+//   - capability queries & signal handling
 
-extern fn new(title: Str) Vaxis!Str = "New"
+extern type RawVaxis = "*vaxis.Vaxis"
 
-extern fn close(vx: Vaxis) Void!Str = "Close"
+// ── Lifecycle
 
-extern fn clear(vx: Vaxis) Void = "Clear"
+extern fn raw_open(title: Str) RawVaxis!Str = "Open"
 
-extern fn render(vx: Vaxis) Void!Str = "Render"
+extern fn raw_close(vx: RawVaxis) Void!Str = "Close"
 
-extern fn refresh(vx: Vaxis) Void = "Refresh"
+extern fn raw_suspend(vx: RawVaxis) Void!Str = "Suspend"
 
-extern fn bell(vx: Vaxis) Void = "Bell"
+extern fn raw_resume(vx: RawVaxis) Void!Str = "Resume"
 
-extern fn set_title(vx: Vaxis, title: Str) Void = "SetTitle"
+// ── Render
 
-extern fn hide_cursor(vx: Vaxis) Void = "HideCursor"
+extern fn raw_render(vx: RawVaxis) Void!Str = "Render"
 
-extern fn show_cursor(vx: Vaxis, x: Int, y: Int) Void = "ShowCursor"
+extern fn raw_refresh(vx: RawVaxis) Void = "Refresh"
 
-extern fn suspend(vx: Vaxis) Void!Str = "Suspend"
+extern fn raw_width(vx: RawVaxis) Int = "Width"
 
-extern fn resume(vx: Vaxis) Void!Str = "Resume"
+extern fn raw_height(vx: RawVaxis) Int = "Height"
 
-extern fn terminal_id(vx: Vaxis) Str = "TerminalID"
+// ── Cell buffer (Go-owned screen buffer)
 
-extern fn rendered_width(vx: Vaxis, text: Str) Int = "RenderedWidth"
+extern fn raw_set_cell(
+  vx: RawVaxis,
+  col: Int,
+  row: Int,
+  grapheme: Str,
+  width: Int,
+  fg: Int,
+  bg: Int,
+  ul_color: Int,
+  ul_style: Int,
+  attrs: Int,
+) Void = "SetCell"
 
-extern fn can_rgb(vx: Vaxis) Bool = "CanRGB"
+extern fn raw_clear_region(
+  vx: RawVaxis,
+  col: Int,
+  row: Int,
+  width: Int,
+  height: Int,
+) Void = "Clear"
 
-extern fn can_sixel(vx: Vaxis) Bool = "CanSixel"
-
-extern fn can_kitty_graphics(vx: Vaxis) Bool = "CanKittyGraphics"
-
-extern fn can_unicode_core(vx: Vaxis) Bool = "CanUnicodeCore"
-
-extern fn can_display_graphics(vx: Vaxis) Bool = "CanDisplayGraphics"
-
-extern fn notify(vx: Vaxis, title: Str, body: Str) Void = "Notify"
-
-extern fn clipboard_push(vx: Vaxis, text: Str) Void = "ClipboardPush"
-
-extern fn read_key(vx: Vaxis) Str!Str = "ReadKey"
-
-extern fn root(vx: Vaxis) Window = "Root"
-
-extern fn window(vx: Vaxis, x: Int, y: Int, width: Int, height: Int) Window = "RootWindow"
-
-extern fn subwindow(win: Window, x: Int, y: Int, width: Int, height: Int) Window = "Subwindow"
-
-extern fn window_width(win: Window) Int = "WindowWidth"
-
-extern fn window_height(win: Window) Int = "WindowHeight"
-
-extern fn window_clear(win: Window) Void = "WindowClear"
-
-extern fn window_draw_text(win: Window, x: Int, y: Int, text: Str) Void = "WindowDrawText"
-
-extern fn window_draw_text_style(
-  win: Window,
-  x: Int,
-  y: Int,
+extern fn raw_write(
+  vx: RawVaxis,
+  col: Int,
+  row: Int,
   text: Str,
   fg: Int,
   bg: Int,
-  bold: Bool,
-  dim: Bool,
-  italic: Bool,
-  underline: Bool,
-  reverse: Bool,
-) Void = "WindowDrawTextStyle"
+  ul_color: Int,
+  ul_style: Int,
+  attrs: Int,
+) Void = "Write"
 
-extern fn window_fill(
-  win: Window,
-  text: Str,
+extern fn raw_fill_region(
+  vx: RawVaxis,
+  col: Int,
+  row: Int,
+  width: Int,
+  height: Int,
+  grapheme: Str,
   fg: Int,
   bg: Int,
+  ul_color: Int,
+  ul_style: Int,
+  attrs: Int,
+) Void = "Fill"
+
+// ── Cursor
+
+extern fn raw_show_cursor(vx: RawVaxis, col: Int, row: Int) Void = "ShowCursor"
+
+extern fn raw_hide_cursor(vx: RawVaxis) Void = "HideCursor"
+
+// ── Events (Go multiplexes stdin + signals, normalizes to strings)
+
+extern fn raw_read_key(vx: RawVaxis) Str!Str = "ReadKey"
+
+// ── Capabilities
+
+extern fn raw_can_rgb(vx: RawVaxis) Bool = "CanRGB"
+
+extern fn raw_can_sixel(vx: RawVaxis) Bool = "CanSixel"
+
+extern fn raw_can_kitty_graphics(vx: RawVaxis) Bool = "CanKittyGraphics"
+
+extern fn raw_can_unicode_core(vx: RawVaxis) Bool = "CanUnicodeCore"
+
+extern fn raw_can_display_graphics(vx: RawVaxis) Bool = "CanDisplayGraphics"
+
+// ── Terminal helpers
+
+extern fn raw_bell(vx: RawVaxis) Void = "Bell"
+
+extern fn raw_set_title(vx: RawVaxis, title: Str) Void = "SetTitle"
+
+extern fn raw_notify(vx: RawVaxis, title: Str, body: Str) Void = "Notify"
+
+extern fn raw_clipboard_push(vx: RawVaxis, text: Str) Void = "ClipboardPush"
+
+extern fn raw_rendered_width(vx: RawVaxis, text: Str) Int = "RenderedWidth"
+
+extern fn raw_terminal_id(vx: RawVaxis) Str = "TerminalID"
+
+extern fn raw_text_backspace(text: Str) Str = "TextBackspace"
+
+// ─── Pure Ard Types ────────────────────────────────────────────────────
+
+// ── Color (type union) ─────────────────────────────────────────────────
+
+struct DefaultColor {}
+
+struct IndexedColor {
+  value: Int,
+}
+
+struct RGBColor {
+  r: Int,
+  g: Int,
+  b: Int,
+}
+
+type Color = DefaultColor | IndexedColor | RGBColor
+
+let COLOR_DEFAULT: Color = DefaultColor{}
+let COLOR_BLACK: Color = IndexedColor{ value: 0 }
+let COLOR_RED: Color = IndexedColor{ value: 1 }
+let COLOR_GREEN: Color = IndexedColor{ value: 2 }
+let COLOR_YELLOW: Color = IndexedColor{ value: 3 }
+let COLOR_BLUE: Color = IndexedColor{ value: 4 }
+let COLOR_MAGENTA: Color = IndexedColor{ value: 5 }
+let COLOR_CYAN: Color = IndexedColor{ value: 6 }
+let COLOR_WHITE: Color = IndexedColor{ value: 7 }
+
+fn rgb(r: Int, g: Int, b: Int) Color {
+  RGBColor{ r: r, g: g, b: b }
+}
+
+fn indexed(i: Int) Color {
+  IndexedColor{ value: i }
+}
+
+// ── UnderlineStyle ─────────────────────────────────────────────────────
+
+enum UnderlineStyle {
+  off,
+  single,
+  double,
+  curly,
+  dotted,
+  dashed,
+}
+
+// ── Style ──────────────────────────────────────────────────────────────
+
+struct Style {
+  fg: Color,
+  bg: Color,
+  ul_color: Color,
+  ul_style: UnderlineStyle,
   bold: Bool,
   dim: Bool,
   italic: Bool,
-  underline: Bool,
+  blink: Bool,
   reverse: Bool,
-) Void = "WindowFill"
+  invisible: Bool,
+  strikethrough: Bool,
+}
 
-extern fn window_show_cursor(win: Window, x: Int, y: Int) Void = "WindowShowCursor"
+// ── Character & Cell ───────────────────────────────────────────────────
 
-extern fn draw_text(vx: Vaxis, x: Int, y: Int, text: Str) Void = "DrawText"
+struct Character {
+  grapheme: Str,
+  width: Int,
+}
 
-extern fn draw_text_style(
-  vx: Vaxis,
-  x: Int,
-  y: Int,
-  text: Str,
-  fg: Int,
-  bg: Int,
-  bold: Bool,
-  dim: Bool,
-  italic: Bool,
-  underline: Bool,
-  reverse: Bool,
-) Void = "DrawTextStyle"
+struct Cell {
+  character: Character,
+  style: Style,
+}
 
-extern fn text_backspace(text: Str) Str = "TextBackspace"
+// ── Key ────────────────────────────────────────────────────────────────
+
+let KEY_UP = "up"
+let KEY_DOWN = "down"
+let KEY_LEFT = "left"
+let KEY_RIGHT = "right"
+let KEY_SELECT = "select"
+let KEY_BACKSPACE = "backspace"
+let KEY_REDRAW = "redraw"
+let KEY_QUIT = "q"
+
+// ── Events ─────────────────────────────────────────────────────────────
+
+struct KeyEvent {
+  key: Str,
+}
+
+struct ResizeEvent {
+  cols: Int,
+  rows: Int,
+}
+
+struct RedrawEvent {}
+
+struct QuitEvent {}
+
+type Event = KeyEvent | ResizeEvent | RedrawEvent | QuitEvent
+
+// ─── Helpers (must be defined before use in impl blocks) ───────────────
+
+fn color_to_int(color: Color) Int {
+  match color {
+    DefaultColor => -1,
+    IndexedColor(it) => it.value,
+    RGBColor(it) => it.r * 65536 + it.g * 256 + it.b,
+  }
+}
+
+fn style_attrs(s: Style) Int {
+  mut attrs = 0
+  if s.bold { attrs = attrs + 1 }
+  if s.dim { attrs = attrs + 2 }
+  if s.italic { attrs = attrs + 4 }
+  if s.blink { attrs = attrs + 8 }
+  if s.reverse { attrs = attrs + 16 }
+  if s.invisible { attrs = attrs + 32 }
+  if s.strikethrough { attrs = attrs + 64 }
+  attrs
+}
+
+fn style_ul_style(ul: UnderlineStyle) Int {
+  match ul {
+    UnderlineStyle::off => 0,
+    UnderlineStyle::single => 1,
+    UnderlineStyle::double => 2,
+    UnderlineStyle::curly => 3,
+    UnderlineStyle::dotted => 4,
+    UnderlineStyle::dashed => 5,
+  }
+}
+
+fn parse_event(key: Str) Event {
+  match key {
+    "q" => QuitEvent{},
+    "redraw" => RedrawEvent{},
+    _ => KeyEvent{ key: key },
+  }
+}
+
+// ─── Style constructors and impl ──────────────────────────────────────
+
+fn default_style() Style {
+  Style{
+    fg: COLOR_DEFAULT,
+    bg: COLOR_DEFAULT,
+    ul_color: COLOR_DEFAULT,
+    ul_style: UnderlineStyle::off,
+    bold: false,
+    dim: false,
+    italic: false,
+    blink: false,
+    reverse: false,
+    invisible: false,
+    strikethrough: false,
+  }
+}
+
+impl Style {
+  fn with_fg(c: Color) Style {
+    Style{
+      fg: c,
+      bg: self.bg,
+      ul_color: self.ul_color,
+      ul_style: self.ul_style,
+      bold: self.bold,
+      dim: self.dim,
+      italic: self.italic,
+      blink: self.blink,
+      reverse: self.reverse,
+      invisible: self.invisible,
+      strikethrough: self.strikethrough,
+    }
+  }
+
+  fn with_bg(c: Color) Style {
+    Style{
+      fg: self.fg,
+      bg: c,
+      ul_color: self.ul_color,
+      ul_style: self.ul_style,
+      bold: self.bold,
+      dim: self.dim,
+      italic: self.italic,
+      blink: self.blink,
+      reverse: self.reverse,
+      invisible: self.invisible,
+      strikethrough: self.strikethrough,
+    }
+  }
+
+  fn with_bold(v: Bool) Style {
+    Style{
+      fg: self.fg,
+      bg: self.bg,
+      ul_color: self.ul_color,
+      ul_style: self.ul_style,
+      bold: v,
+      dim: self.dim,
+      italic: self.italic,
+      blink: self.blink,
+      reverse: self.reverse,
+      invisible: self.invisible,
+      strikethrough: self.strikethrough,
+    }
+  }
+
+  fn with_dim(v: Bool) Style {
+    Style{
+      fg: self.fg,
+      bg: self.bg,
+      ul_color: self.ul_color,
+      ul_style: self.ul_style,
+      bold: self.bold,
+      dim: v,
+      italic: self.italic,
+      blink: self.blink,
+      reverse: self.reverse,
+      invisible: self.invisible,
+      strikethrough: self.strikethrough,
+    }
+  }
+
+  fn with_italic(v: Bool) Style {
+    Style{
+      fg: self.fg,
+      bg: self.bg,
+      ul_color: self.ul_color,
+      ul_style: self.ul_style,
+      bold: self.bold,
+      dim: self.dim,
+      italic: v,
+      blink: self.blink,
+      reverse: self.reverse,
+      invisible: self.invisible,
+      strikethrough: self.strikethrough,
+    }
+  }
+
+  fn with_underline(v: Bool) Style {
+    let ul = match v {
+      true => UnderlineStyle::single,
+      false => UnderlineStyle::off,
+    }
+    Style{
+      fg: self.fg,
+      bg: self.bg,
+      ul_color: self.ul_color,
+      ul_style: ul,
+      bold: self.bold,
+      dim: self.dim,
+      italic: self.italic,
+      blink: self.blink,
+      reverse: self.reverse,
+      invisible: self.invisible,
+      strikethrough: self.strikethrough,
+    }
+  }
+
+  fn with_reverse(v: Bool) Style {
+    Style{
+      fg: self.fg,
+      bg: self.bg,
+      ul_color: self.ul_color,
+      ul_style: self.ul_style,
+      bold: self.bold,
+      dim: self.dim,
+      italic: self.italic,
+      blink: self.blink,
+      reverse: v,
+      invisible: self.invisible,
+      strikethrough: self.strikethrough,
+    }
+  }
+}
+
+// ─── Cell constructors ────────────────────────────────────────────────
+
+fn default_cell() Cell {
+  Cell{
+    character: Character{ grapheme: " ", width: 1 },
+    style: default_style(),
+  }
+}
+
+fn cell_from_str(grapheme: Str) Cell {
+  Cell{
+    character: Character{ grapheme: grapheme, width: 1 },
+    style: default_style(),
+  }
+}
+
+fn cell_styled(grapheme: Str, style: Style) Cell {
+  Cell{
+    character: Character{ grapheme: grapheme, width: 1 },
+    style: style,
+  }
+}
+
+// ─── Window ────────────────────────────────────────────────────────────
+
+struct Window {
+  vx: RawVaxis,
+  col_offset: Int,
+  row_offset: Int,
+  width: Int,
+  height: Int,
+}
+
+fn window_root(vx: RawVaxis, width: Int, height: Int) Window {
+  Window{ vx: vx, col_offset: 0, row_offset: 0, width: width, height: height }
+}
+
+impl Window {
+  fn child(col: Int, row: Int, width: Int, height: Int) Window {
+    mut w = width
+    if w < 0 { w = self.width - col }
+    mut h = height
+    if h < 0 { h = self.height - row }
+    Window{
+      vx: self.vx,
+      col_offset: self.col_offset + col,
+      row_offset: self.row_offset + row,
+      width: w,
+      height: h,
+    }
+  }
+
+  fn width() Int { self.width }
+
+  fn height() Int { self.height }
+
+  fn mut set_cell(col: Int, row: Int, cell: Cell) {
+    let in_bounds = col >= 0 and col < self.width and row >= 0 and row < self.height
+    if in_bounds {
+      let s = cell.style
+      raw_set_cell(
+        self.vx,
+        self.col_offset + col,
+        self.row_offset + row,
+        cell.character.grapheme,
+        cell.character.width,
+        color_to_int(s.fg),
+        color_to_int(s.bg),
+        color_to_int(s.ul_color),
+        style_ul_style(s.ul_style),
+        style_attrs(s),
+      )
+    }
+  }
+
+  fn mut fill(cell: Cell) {
+    let s = cell.style
+    let attrs = style_attrs(s)
+    let ul = style_ul_style(s.ul_style)
+    raw_fill_region(
+      self.vx,
+      self.col_offset,
+      self.row_offset,
+      self.width,
+      self.height,
+      cell.character.grapheme,
+      color_to_int(s.fg),
+      color_to_int(s.bg),
+      color_to_int(s.ul_color),
+      ul,
+      attrs,
+    )
+  }
+
+  fn mut clear() {
+    raw_clear_region(self.vx, self.col_offset, self.row_offset, self.width, self.height)
+  }
+
+  fn mut show_cursor(col: Int, row: Int) {
+    raw_show_cursor(self.vx, self.col_offset + col, self.row_offset + row)
+  }
+
+  fn mut write(col: Int, row: Int, text: Str, style: Style) {
+    raw_write(
+      self.vx,
+      self.col_offset + col,
+      self.row_offset + row,
+      text,
+      color_to_int(style.fg),
+      color_to_int(style.bg),
+      color_to_int(style.ul_color),
+      style_ul_style(style.ul_style),
+      style_attrs(style),
+    )
+  }
+
+  fn mut write_line(row: Int, col: Int, text: Str, style: Style) {
+    raw_write(
+      self.vx,
+      self.col_offset + col,
+      self.row_offset + row,
+      text,
+      color_to_int(style.fg),
+      color_to_int(style.bg),
+      color_to_int(style.ul_color),
+      style_ul_style(style.ul_style),
+      style_attrs(style),
+    )
+  }
+}
+
+// ─── App ───────────────────────────────────────────────────────────────
+
+struct App {
+  vx: RawVaxis,
+  width: Int,
+  height: Int,
+}
+
+fn app_open(title: Str) App!Str {
+  let vx = try raw_open(title)
+  let w = raw_width(vx)
+  let h = raw_height(vx)
+  Result::ok(App{ vx: vx, width: w, height: h })
+}
+
+impl App {
+  fn mut close() Void!Str {
+    raw_close(self.vx)
+  }
+
+  fn mut suspend() Void!Str {
+    raw_suspend(self.vx)
+  }
+
+  fn mut resume() Void!Str {
+    raw_resume(self.vx)
+  }
+
+  fn mut render() Void!Str {
+    raw_render(self.vx)
+  }
+
+  fn mut refresh() Void {
+    raw_refresh(self.vx)
+  }
+
+  fn mut hide_cursor() Void {
+    raw_hide_cursor(self.vx)
+  }
+
+  fn mut show_cursor(col: Int, row: Int) Void {
+    raw_show_cursor(self.vx, col, row)
+  }
+
+  fn mut read_key() Str!Str {
+    raw_read_key(self.vx)
+  }
+
+  fn mut read_event() Event!Str {
+    let key = try raw_read_key(self.vx)
+    Result::ok(parse_event(key))
+  }
+
+  fn root_window() Window {
+    window_root(self.vx, self.width, self.height)
+  }
+
+  fn window(col: Int, row: Int, width: Int, height: Int) Window {
+    let root = window_root(self.vx, self.width, self.height)
+    root.child(col, row, width, height)
+  }
+
+  fn can_rgb() Bool { raw_can_rgb(self.vx) }
+  fn can_sixel() Bool { raw_can_sixel(self.vx) }
+  fn can_kitty_graphics() Bool { raw_can_kitty_graphics(self.vx) }
+  fn can_unicode_core() Bool { raw_can_unicode_core(self.vx) }
+  fn can_display_graphics() Bool { raw_can_display_graphics(self.vx) }
+
+  fn mut bell() Void { raw_bell(self.vx) }
+  fn mut set_title(title: Str) Void { raw_set_title(self.vx, title) }
+  fn mut notify(title: Str, body: Str) Void { raw_notify(self.vx, title, body) }
+  fn mut clipboard_push(text: Str) Void { raw_clipboard_push(self.vx, text) }
+  fn rendered_width(text: Str) Int { raw_rendered_width(self.vx, text) }
+  fn terminal_id() Str { raw_terminal_id(self.vx) }
+  fn text_backspace(text: Str) Str { raw_text_backspace(text) }
+}

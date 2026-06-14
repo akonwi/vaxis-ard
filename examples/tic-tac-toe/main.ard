@@ -1,18 +1,7 @@
 use ard/maybe
+use vaxis
 
-extern type Terminal
-
-extern fn tui_open() Terminal!Str = "TuiOpen"
-
-extern fn tui_close(term: Terminal) Void!Str = "TuiClose"
-
-extern fn tui_clear(term: Terminal) Void = "TuiClear"
-
-extern fn tui_draw_text(term: Terminal, x: Int, y: Int, text: Str) Void = "TuiDrawText"
-
-extern fn tui_flush(term: Terminal) Void!Str = "TuiFlush"
-
-extern fn tui_read_key(term: Terminal) Str!Str = "TuiReadKey"
+// ─── Board ────────────────────────────────────────────────────────────
 
 struct Board {
   cells: [Str],
@@ -43,46 +32,24 @@ impl Board {
 
   fn get_winner() Str? {
     mut res: Str? = maybe::none()
-
     if not self.cells.at(0).is_empty() {
-      if self.cells.at(0) == self.cells.at(1) and self.cells.at(0) == self.cells.at(2) {
-        res = maybe::some(self.cells.at(0))
-      }
-      if self.cells.at(0) == self.cells.at(3) and self.cells.at(0) == self.cells.at(6) {
-        res = maybe::some(self.cells.at(0))
-      }
-      if self.cells.at(0) == self.cells.at(4) and self.cells.at(0) == self.cells.at(8) {
-        res = maybe::some(self.cells.at(0))
-      }
+      if self.cells.at(0) == self.cells.at(1) and self.cells.at(0) == self.cells.at(2) { res = maybe::some(self.cells.at(0)) }
+      if self.cells.at(0) == self.cells.at(3) and self.cells.at(0) == self.cells.at(6) { res = maybe::some(self.cells.at(0)) }
+      if self.cells.at(0) == self.cells.at(4) and self.cells.at(0) == self.cells.at(8) { res = maybe::some(self.cells.at(0)) }
     }
-
     if not self.cells.at(1).is_empty() {
-      if self.cells.at(1) == self.cells.at(4) and self.cells.at(1) == self.cells.at(7) {
-        res = maybe::some(self.cells.at(1))
-      }
+      if self.cells.at(1) == self.cells.at(4) and self.cells.at(1) == self.cells.at(7) { res = maybe::some(self.cells.at(1)) }
     }
-
     if not self.cells.at(2).is_empty() {
-      if self.cells.at(2) == self.cells.at(5) and self.cells.at(2) == self.cells.at(8) {
-        res = maybe::some(self.cells.at(2))
-      }
-      if self.cells.at(2) == self.cells.at(4) and self.cells.at(2) == self.cells.at(6) {
-        res = maybe::some(self.cells.at(2))
-      }
+      if self.cells.at(2) == self.cells.at(5) and self.cells.at(2) == self.cells.at(8) { res = maybe::some(self.cells.at(2)) }
+      if self.cells.at(2) == self.cells.at(4) and self.cells.at(2) == self.cells.at(6) { res = maybe::some(self.cells.at(2)) }
     }
-
     if not self.cells.at(3).is_empty() {
-      if self.cells.at(3) == self.cells.at(4) and self.cells.at(3) == self.cells.at(5) {
-        res = maybe::some(self.cells.at(3))
-      }
+      if self.cells.at(3) == self.cells.at(4) and self.cells.at(3) == self.cells.at(5) { res = maybe::some(self.cells.at(3)) }
     }
-
     if not self.cells.at(6).is_empty() {
-      if self.cells.at(6) == self.cells.at(7) and self.cells.at(6) == self.cells.at(8) {
-        res = maybe::some(self.cells.at(6))
-      }
+      if self.cells.at(6) == self.cells.at(7) and self.cells.at(6) == self.cells.at(8) { res = maybe::some(self.cells.at(6)) }
     }
-
     res
   }
 }
@@ -90,154 +57,78 @@ impl Board {
 fn cell_label(board: Board, pos: Int, selected: Int) Str {
   let value = board.cells.at(pos)
   mut label = value
-  if label.is_empty() {
-    label = " "
-  }
+  if label.is_empty() { label = " " }
   match pos == selected {
     true => "[" + label + "]",
     false => " " + label + " ",
   }
 }
 
-fn draw_board(term: Terminal, board: Board, selected: Int, player: Str, message: Str) Void!Str {
-  tui_clear(term)
-  tui_draw_text(term, 2, 1, "Ard + Vaxis Tic-Tac-Toe")
-  tui_draw_text(
-    term,
-    2,
-    2,
-    "────────────────────────",
-  )
-  tui_draw_text(term, 2, 4, "Player " + player + " to move")
-  tui_draw_text(term, 2, 6, "┌───┬───┬───┐")
-  tui_draw_text(
-    term,
-    2,
-    7,
-    "│" + cell_label(board, 0, selected) + "│" + cell_label(board, 1, selected) + "│" + cell_label(board, 2, selected) + "│",
-  )
-  tui_draw_text(term, 2, 8, "├───┼───┼───┤")
-  tui_draw_text(
-    term,
-    2,
-    9,
-    "│" + cell_label(board, 3, selected) + "│" + cell_label(board, 4, selected) + "│" + cell_label(board, 5, selected) + "│",
-  )
-  tui_draw_text(term, 2, 10, "├───┼───┼───┤")
-  tui_draw_text(
-    term,
-    2,
-    11,
-    "│" + cell_label(board, 6, selected) + "│" + cell_label(board, 7, selected) + "│" + cell_label(board, 8, selected) + "│",
-  )
-  tui_draw_text(term, 2, 12, "└───┴───┴───┘")
-  tui_draw_text(term, 2, 14, message)
-  tui_draw_text(term, 2, 16, "Move: arrows/hjkl or 1-9. Select: enter/space. q quits. r restarts.")
-  tui_draw_text(term, 2, 17, "This TUI is rendered by Vaxis through project Go FFI.")
-  tui_flush(term)
+fn draw_board(mut app: vaxis::App, board: Board, selected: Int, player: Str, message: Str) Void!Str {
+  mut win = app.root_window()
+  win.clear()
+
+  let bold = vaxis::default_style().with_bold(true)
+  let dim = vaxis::default_style().with_dim(true)
+  let plain = vaxis::default_style()
+
+  win.write(2, 1, "Ard + Vaxis Tic-Tac-Toe", bold)
+  win.write(2, 2, "────────────────────────", dim)
+  win.write(2, 4, "Player " + player + " to move", plain)
+  win.write(2, 6, "┌───┬───┬───┐", plain)
+  win.write(2, 7, "│" + cell_label(board, 0, selected) + "│" + cell_label(board, 1, selected) + "│" + cell_label(board, 2, selected) + "│", plain)
+  win.write(2, 8, "├───┼───┼───┤", plain)
+  win.write(2, 9, "│" + cell_label(board, 3, selected) + "│" + cell_label(board, 4, selected) + "│" + cell_label(board, 5, selected) + "│", plain)
+  win.write(2, 10, "├───┼───┼───┤", plain)
+  win.write(2, 11, "│" + cell_label(board, 6, selected) + "│" + cell_label(board, 7, selected) + "│" + cell_label(board, 8, selected) + "│", plain)
+  win.write(2, 12, "└───┴───┴───┘", plain)
+  win.write(2, 14, message, plain)
+  win.write(2, 16, "Move: arrows/hjkl or 1-9. Select: enter/space. q quits. r restarts.", dim)
+
+  try app.render()
+  Result::ok(())
 }
 
 fn selected_from_key(key: Str, selected: Int) Int {
-  mut res = selected
-  mut handled = false
-
-  if key == "1" {
-    res = 0
-    handled = true
+  match key {
+    "1" => 0,
+    "2" => 1,
+    "3" => 2,
+    "4" => 3,
+    "5" => 4,
+    "6" => 5,
+    "7" => 6,
+    "8" => 7,
+    "9" => 8,
+    "left" => match not selected % 3 == 0 {
+      true => selected - 1,
+      false => selected,
+    },
+    "right" => match not selected % 3 == 2 {
+      true => selected + 1,
+      false => selected,
+    },
+    "up" => match selected >= 3 {
+      true => selected - 3,
+      false => selected,
+    },
+    "down" => match selected <= 5 {
+      true => selected + 3,
+      false => selected,
+    },
+    _ => selected,
   }
-  if handled == false {
-    if key == "2" {
-      res = 1
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "3" {
-      res = 2
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "4" {
-      res = 3
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "5" {
-      res = 4
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "6" {
-      res = 5
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "7" {
-      res = 6
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "8" {
-      res = 7
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "9" {
-      res = 8
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "left" {
-      if not selected % 3 == 0 {
-        res = selected - 1
-      }
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "right" {
-      if not selected % 3 == 2 {
-        res = selected + 1
-      }
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "up" {
-      if selected >= 3 {
-        res = selected - 3
-      }
-      handled = true
-    }
-  }
-  if handled == false {
-    if key == "down" {
-      if selected <= 5 {
-        res = selected + 3
-      }
-      handled = true
-    }
-  }
-  res
 }
 
 fn next_player(player: Str) Str {
-  mut res = "X"
-  if player == "X" {
-    res = "O"
+  match player == "X" {
+    true => "O",
+    false => "X",
   }
-  res
 }
 
-fn run_game(term: Terminal) Void!Str {
-  mut board = Board{cells: ["", "", "", "", "", "", "", "", ""]}
+fn run_game(mut app: vaxis::App) Void!Str {
+  mut board = Board{ cells: ["", "", "", "", "", "", "", "", ""] }
   mut player = "X"
   mut selected = 0
   mut message = "Choose a square."
@@ -245,68 +136,45 @@ fn run_game(term: Terminal) Void!Str {
   mut running = true
 
   while running {
-    try draw_board(term, board, selected, player, message)
-    let key = try tui_read_key(term)
-
-    mut handled = false
+    try draw_board(app, board, selected, player, message)
+    let key = try app.read_key()
 
     if key == "q" {
       running = false
-      handled = true
-    }
-
-    if handled == false {
-      if key == "r" {
-        board = Board{cells: ["", "", "", "", "", "", "", "", ""]}
-        player = "X"
-        selected = 0
-        message = "New game. Choose a square."
-        finished = false
-        handled = true
-      }
-    }
-
-    if handled == false {
-      if key == "select" {
-        if finished {
-          message = "Game is over. Press r to restart or q to quit."
-        }
-        if finished == false {
-          mut played = false
-          if board.can_play(selected) {
-            board.play(player, selected)
-            played = true
-            match board.get_winner() {
-              winner => {
-                message = "Player " + winner + " wins! Press r to restart or q to quit."
+    } else if key == "r" {
+      board = Board{ cells: ["", "", "", "", "", "", "", "", ""] }
+      player = "X"
+      selected = 0
+      message = "New game. Choose a square."
+      finished = false
+    } else if key == "select" {
+      if finished {
+        message = "Game is over. Press r to restart or q to quit."
+      } else {
+        if board.can_play(selected) {
+          board.play(player, selected)
+          match board.get_winner() {
+            winner => {
+              message = "Player " + winner + " wins! Press r to restart or q to quit."
+              finished = true
+            },
+            _ => {
+              if board.is_full() {
+                message = "Game over: draw. Press r to restart or q to quit."
                 finished = true
-              },
-              _ => {
-                if board.is_full() {
-                  message = "Game over: draw. Press r to restart or q to quit."
-                  finished = true
-                } else {
-                  player = next_player(player)
-                  message = "Player " + player + " to move."
-                }
-              },
-            }
+              } else {
+                player = next_player(player)
+                message = "Player " + player + " to move."
+              }
+            },
           }
-          if played == false {
-            message = "That square is already occupied."
-          }
+        } else {
+          message = "That square is already occupied."
         }
-        handled = true
       }
-    }
-
-    if handled == false {
-      if key == "redraw" {
-        handled = true
-      }
-    }
-
-    if handled == false {
+    } else if key == "redraw" {
+      // just redraw
+    } else {
       selected = selected_from_key(key, selected)
     }
   }
@@ -315,7 +183,7 @@ fn run_game(term: Terminal) Void!Str {
 }
 
 fn main() Void {
-  let term = tui_open().expect("open terminal")
-  run_game(term).expect("run game")
-  tui_close(term).expect("close terminal")
+  mut app = vaxis::app_open("Tic-Tac-Toe").expect("open terminal")
+  run_game(app).expect("run game")
+  app.close().expect("close terminal")
 }

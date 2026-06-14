@@ -8,7 +8,9 @@ import (
 	"git.sr.ht/~rockorager/vaxis"
 )
 
-func New(title string) (*vaxis.Vaxis, error) {
+// ─── Lifecycle ────────────────────────────────────────────────────────────
+
+func Open(title string) (*vaxis.Vaxis, error) {
 	vx, err := vaxis.New(vaxis.Options{DisableKittyKeyboard: true})
 	if err != nil {
 		return nil, err
@@ -21,255 +23,174 @@ func New(title string) (*vaxis.Vaxis, error) {
 	return vx, nil
 }
 
-func Close(term *vaxis.Vaxis) error {
-	if term == nil {
+func Close(vx *vaxis.Vaxis) error {
+	if vx == nil {
 		return nil
 	}
-	term.Close()
+	vx.Close()
 	return nil
 }
 
-func Clear(term *vaxis.Vaxis) {
-	if term == nil {
-		return
-	}
-	term.Window().Clear()
-}
-
-func Refresh(term *vaxis.Vaxis) {
-	if term != nil {
-		term.Refresh()
-	}
-}
-
-func Bell(term *vaxis.Vaxis) {
-	if term != nil {
-		term.Bell()
-	}
-}
-
-func SetTitle(term *vaxis.Vaxis, title string) {
-	if term != nil {
-		term.SetTitle(title)
-	}
-}
-
-func HideCursor(term *vaxis.Vaxis) {
-	if term != nil {
-		term.HideCursor()
-	}
-}
-
-func ShowCursor(term *vaxis.Vaxis, x int, y int) {
-	if term != nil {
-		term.ShowCursor(x, y, vaxis.CursorBlock)
-	}
-}
-
-func Suspend(term *vaxis.Vaxis) error {
-	if term == nil {
+func Suspend(vx *vaxis.Vaxis) error {
+	if vx == nil {
 		return nil
 	}
-	return term.Suspend()
+	return vx.Suspend()
 }
 
-func Resume(term *vaxis.Vaxis) error {
-	if term == nil {
+func Resume(vx *vaxis.Vaxis) error {
+	if vx == nil {
 		return nil
 	}
-	return term.Resume()
+	return vx.Resume()
 }
 
-func TerminalID(term *vaxis.Vaxis) string {
-	if term == nil {
-		return ""
-	}
-	return term.TerminalID()
-}
+// ─── Render ───────────────────────────────────────────────────────────────
 
-func RenderedWidth(term *vaxis.Vaxis, text string) int {
-	if term == nil {
-		return len([]rune(text))
-	}
-	return term.RenderedWidth(text)
-}
-
-func CanRGB(term *vaxis.Vaxis) bool {
-	return term != nil && term.CanRGB()
-}
-
-func CanSixel(term *vaxis.Vaxis) bool {
-	return term != nil && term.CanSixel()
-}
-
-func CanKittyGraphics(term *vaxis.Vaxis) bool {
-	return term != nil && term.CanKittyGraphics()
-}
-
-func CanUnicodeCore(term *vaxis.Vaxis) bool {
-	return term != nil && term.CanUnicodeCore()
-}
-
-func CanDisplayGraphics(term *vaxis.Vaxis) bool {
-	return term != nil && term.CanDisplayGraphics()
-}
-
-func Notify(term *vaxis.Vaxis, title string, body string) {
-	if term != nil {
-		term.Notify(title, body)
-	}
-}
-
-func ClipboardPush(term *vaxis.Vaxis, text string) {
-	if term != nil {
-		term.ClipboardPush(text)
-	}
-}
-
-func DrawText(term *vaxis.Vaxis, x int, y int, text string) {
-	if term == nil {
-		return
-	}
-	WindowDrawText(term.Window(), x, y, text)
-}
-
-func DrawTextStyle(term *vaxis.Vaxis, x int, y int, text string, fg int, bg int, bold bool, dim bool, italic bool, underline bool, reverse bool) {
-	if term == nil {
-		return
-	}
-	WindowDrawTextStyle(term.Window(), x, y, text, fg, bg, bold, dim, italic, underline, reverse)
-}
-
-func Render(term *vaxis.Vaxis) error {
-	if term == nil {
+func Render(vx *vaxis.Vaxis) error {
+	if vx == nil {
 		return nil
 	}
-	term.Render()
+	vx.Render()
 	return nil
 }
 
-func Root(term *vaxis.Vaxis) vaxis.Window {
-	if term == nil {
-		return vaxis.Window{}
+func Refresh(vx *vaxis.Vaxis) {
+	if vx != nil {
+		vx.Refresh()
 	}
-	return term.Window()
 }
 
-func RootWindow(term *vaxis.Vaxis, x int, y int, width int, height int) vaxis.Window {
-	return Subwindow(Root(term), x, y, width, height)
-}
-
-func Subwindow(win vaxis.Window, x int, y int, width int, height int) vaxis.Window {
-	if width < 0 {
-		width = 0
+func Width(vx *vaxis.Vaxis) int {
+	if vx == nil {
+		return 80
 	}
-	if height < 0 {
-		height = 0
+	w, _ := vx.Window().Size()
+	return w
+}
+
+func Height(vx *vaxis.Vaxis) int {
+	if vx == nil {
+		return 24
 	}
-	return win.New(x, y, width, height)
+	_, h := vx.Window().Size()
+	return h
 }
 
-func WindowWidth(win vaxis.Window) int {
-	width, _ := win.Size()
-	return width
-}
+// ─── Cell buffer ──────────────────────────────────────────────────────────
 
-func WindowHeight(win vaxis.Window) int {
-	_, height := win.Size()
-	return height
-}
-
-func WindowClear(win vaxis.Window) {
-	win.Clear()
-}
-
-func WindowDrawText(win vaxis.Window, x int, y int, text string) {
-	width, height := win.Size()
-	if x < 0 || y < 0 || x >= width || y >= height {
+// SetCell writes a single cell into the screen buffer at absolute coordinates.
+// width=0 lets vaxis measure the grapheme width.
+// fg/bg/ulColor: -1 for default, 0-255 indexed, >255 packed RGB.
+// ulStyle: 0=off 1=single 2=double 3=curly 4=dotted 5=dashed.
+// attrs bitmask: bold=1 dim=2 italic=4 blink=8 reverse=16 invisible=32 strikethrough=64.
+func SetCell(
+	vx *vaxis.Vaxis,
+	col int, row int,
+	grapheme string, width int,
+	fg int, bg int,
+	ulColor int, ulStyle int,
+	attrs int,
+) {
+	if vx == nil {
 		return
 	}
-	win.New(x, y, width-x, 1).Print(vaxis.Segment{Text: text})
+	style := decodeStyle(fg, bg, ulColor, ulStyle, attrs)
+	if width <= 0 {
+		width = 1
+	}
+	vx.Window().SetCell(col, row, vaxis.Cell{
+		Character: vaxis.Character{Grapheme: grapheme, Width: width},
+		Style:     style,
+	})
 }
 
-func WindowDrawTextStyle(win vaxis.Window, x int, y int, text string, fg int, bg int, bold bool, dim bool, italic bool, underline bool, reverse bool) {
-	width, height := win.Size()
-	if x < 0 || y < 0 || x >= width || y >= height {
+// Write prints a string at absolute coordinates, using vaxis's grapheme
+// segmentation and width measurement (uniseg).
+func Write(
+	vx *vaxis.Vaxis,
+	col, row int,
+	text string,
+	fg, bg, ulColor, ulStyle, attrs int,
+) {
+	if vx == nil || text == "" {
 		return
 	}
-	win.New(x, y, width-x, 1).Print(vaxis.Segment{Text: text, Style: makeStyle(fg, bg, bold, dim, italic, underline, reverse)})
+	style := decodeStyle(fg, bg, ulColor, ulStyle, attrs)
+	win := vx.Window()
+	for _, ch := range vaxis.Characters(text) {
+		win.SetCell(col, row, vaxis.Cell{
+			Character: ch,
+			Style:     style,
+		})
+		col += ch.Width
+	}
 }
 
-func WindowFill(win vaxis.Window, text string, fg int, bg int, bold bool, dim bool, italic bool, underline bool, reverse bool) {
-	ch := " "
-	if text != "" {
-		ch = firstCharacter(text)
+// Clear fills the given region with default-style spaces, resetting graphics.
+func Clear(vx *vaxis.Vaxis, col, row, width, height int) {
+	if vx == nil {
+		return
 	}
-	win.Fill(vaxis.Cell{Character: vaxis.Character{Grapheme: ch, Width: 1}, Style: makeStyle(fg, bg, bold, dim, italic, underline, reverse)})
-}
-
-func WindowShowCursor(win vaxis.Window, x int, y int) {
-	win.ShowCursor(x, y, vaxis.CursorBlock)
-}
-
-func TextBackspace(text string) string {
-	if text == "" {
-		return ""
-	}
-	_, size := utf8.DecodeLastRuneInString(text)
-	if size <= 0 {
-		return ""
-	}
-	return text[:len(text)-size]
-}
-
-func makeStyle(fg int, bg int, bold bool, dim bool, italic bool, underline bool, reverse bool) vaxis.Style {
-	style := vaxis.Style{}
-	if fg >= 0 {
-		style.Foreground = colorFromInt(fg)
-	}
-	if bg >= 0 {
-		style.Background = colorFromInt(bg)
-	}
-	if bold {
-		style.Attribute |= vaxis.AttrBold
-	}
-	if dim {
-		style.Attribute |= vaxis.AttrDim
-	}
-	if italic {
-		style.Attribute |= vaxis.AttrItalic
-	}
-	if reverse {
-		style.Attribute |= vaxis.AttrReverse
-	}
-	if underline {
-		style.UnderlineStyle = vaxis.UnderlineSingle
-	}
-	return style
-}
-
-func colorFromInt(value int) vaxis.Color {
-	if value >= 0 && value <= 255 {
-		return vaxis.IndexColor(uint8(value))
-	}
-	return vaxis.HexColor(uint32(value))
-}
-
-func firstCharacter(text string) string {
-	for _, r := range text {
-		if r == 0 || !unicode.IsPrint(r) {
-			break
+	win := vx.Window()
+	for r := 0; r < height; r++ {
+		for c := 0; c < width; c++ {
+			win.SetCell(col+c, row+r, vaxis.Cell{
+				Character: vaxis.Character{Grapheme: " ", Width: 1},
+				Style:     vaxis.Style{},
+			})
 		}
-		return string(r)
 	}
-	return " "
 }
 
-func ReadKey(term *vaxis.Vaxis) (string, error) {
-	if term == nil {
+// Fill writes the same cell (with style) across the given region.
+func Fill(
+	vx *vaxis.Vaxis,
+	col, row, width, height int,
+	grapheme string,
+	fg int, bg int,
+	ulColor int, ulStyle int,
+	attrs int,
+) {
+	if vx == nil {
+		return
+	}
+	if grapheme == "" {
+		grapheme = " "
+	}
+	style := decodeStyle(fg, bg, ulColor, ulStyle, attrs)
+	win := vx.Window()
+	for r := 0; r < height; r++ {
+		for c := 0; c < width; c++ {
+			win.SetCell(col+c, row+r, vaxis.Cell{
+				Character: vaxis.Character{Grapheme: grapheme, Width: 1},
+				Style:     style,
+			})
+		}
+	}
+}
+
+// ─── Cursor ───────────────────────────────────────────────────────────────
+
+func ShowCursor(vx *vaxis.Vaxis, col, row int) {
+	if vx != nil {
+		vx.ShowCursor(col, row, vaxis.CursorBlock)
+	}
+}
+
+func HideCursor(vx *vaxis.Vaxis) {
+	if vx != nil {
+		vx.HideCursor()
+	}
+}
+
+// ─── Events ───────────────────────────────────────────────────────────────
+
+func ReadKey(vx *vaxis.Vaxis) (string, error) {
+	if vx == nil {
 		return "q", nil
 	}
-	for ev := range term.Events() {
+	for ev := range vx.Events() {
 		switch ev := ev.(type) {
 		case vaxis.Key:
 			if ev.EventType != vaxis.EventPress {
@@ -320,9 +241,6 @@ func drainStartupEvents(vx *vaxis.Vaxis) {
 }
 
 func appKeyFromVaxisKey(key vaxis.Key) string {
-	// Do not use BaseLayoutCode here: it describes the physical PC-101 key and
-	// can turn a typed app command like "r" into a movement key on alternate
-	// layouts/protocols. App commands should follow the produced text/keycode.
 	for _, candidate := range []rune{firstRune(key.Text), key.Keycode, key.ShiftedCode} {
 		if candidate == 0 || candidate > unicode.MaxRune || !unicode.IsPrint(candidate) {
 			continue
@@ -354,4 +272,112 @@ func firstRune(text string) rune {
 		return r
 	}
 	return 0
+}
+
+// ─── Capabilities ──────────────────────────────────────────────────────────
+
+func CanRGB(vx *vaxis.Vaxis) bool           { return vx != nil && vx.CanRGB() }
+func CanSixel(vx *vaxis.Vaxis) bool         { return vx != nil && vx.CanSixel() }
+func CanKittyGraphics(vx *vaxis.Vaxis) bool { return vx != nil && vx.CanKittyGraphics() }
+func CanUnicodeCore(vx *vaxis.Vaxis) bool   { return vx != nil && vx.CanUnicodeCore() }
+func CanDisplayGraphics(vx *vaxis.Vaxis) bool {
+	return vx != nil && vx.CanDisplayGraphics()
+}
+
+// ─── Terminal helpers ──────────────────────────────────────────────────────
+
+func Bell(vx *vaxis.Vaxis) {
+	if vx != nil {
+		vx.Bell()
+	}
+}
+
+func SetTitle(vx *vaxis.Vaxis, title string) {
+	if vx != nil {
+		vx.SetTitle(title)
+	}
+}
+
+func Notify(vx *vaxis.Vaxis, title, body string) {
+	if vx != nil {
+		vx.Notify(title, body)
+	}
+}
+
+func ClipboardPush(vx *vaxis.Vaxis, text string) {
+	if vx != nil {
+		vx.ClipboardPush(text)
+	}
+}
+
+func RenderedWidth(vx *vaxis.Vaxis, text string) int {
+	if vx == nil {
+		return len([]rune(text))
+	}
+	return vx.RenderedWidth(text)
+}
+
+func TerminalID(vx *vaxis.Vaxis) string {
+	if vx == nil {
+		return ""
+	}
+	return vx.TerminalID()
+}
+
+func TextBackspace(text string) string {
+	if text == "" {
+		return ""
+	}
+	_, size := utf8.DecodeLastRuneInString(text)
+	if size <= 0 {
+		return ""
+	}
+	return text[:len(text)-size]
+}
+
+// ─── Style decoding (shared) ──────────────────────────────────────────────
+
+// decodeStyle converts the FlatBuffers-style encoded parameters into a
+// vaxis.Style.  See SetCell for the encoding descriptions.
+func decodeStyle(fg, bg, ulColor, ulStyle, attrs int) vaxis.Style {
+	style := vaxis.Style{}
+	if fg >= 0 {
+		style.Foreground = colorFromInt(fg)
+	}
+	if bg >= 0 {
+		style.Background = colorFromInt(bg)
+	}
+	if ulColor >= 0 {
+		style.UnderlineColor = colorFromInt(ulColor)
+	}
+	style.UnderlineStyle = vaxis.UnderlineStyle(ulStyle)
+	if attrs&1 != 0 {
+		style.Attribute |= vaxis.AttrBold
+	}
+	if attrs&2 != 0 {
+		style.Attribute |= vaxis.AttrDim
+	}
+	if attrs&4 != 0 {
+		style.Attribute |= vaxis.AttrItalic
+	}
+	if attrs&8 != 0 {
+		style.Attribute |= vaxis.AttrBlink
+	}
+	if attrs&16 != 0 {
+		style.Attribute |= vaxis.AttrReverse
+	}
+	if attrs&32 != 0 {
+		style.Attribute |= vaxis.AttrInvisible
+	}
+	if attrs&64 != 0 {
+		style.Attribute |= vaxis.AttrStrikethrough
+	}
+	return style
+}
+
+func colorFromInt(value int) vaxis.Color {
+	if value >= 0 && value <= 255 {
+		return vaxis.IndexColor(uint8(value))
+	}
+	return vaxis.HexColor(uint32(value))
 }
