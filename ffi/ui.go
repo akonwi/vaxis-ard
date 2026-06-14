@@ -482,6 +482,19 @@ func UiRun(root ui.Widget) error {
 	return ui.Run(root)
 }
 
+func UiRunWithBaseColors(root ui.Widget, black, red, green, yellow, blue, magenta, cyan, white int) error {
+	return ui.Run(root, ui.WithBaseColors(ui.BaseColors{
+		Black:   colorFromInt(black),
+		Red:     colorFromInt(red),
+		Green:   colorFromInt(green),
+		Yellow:  colorFromInt(yellow),
+		Blue:    colorFromInt(blue),
+		Magenta: colorFromInt(magenta),
+		Cyan:    colorFromInt(cyan),
+		White:   colorFromInt(white),
+	}))
+}
+
 // ─── Event helpers ────────────────────────────────────────────────────
 
 func UiQuit(ctx ui.EventContext) { ctx.Quit() }

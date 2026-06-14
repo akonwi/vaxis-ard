@@ -28,9 +28,14 @@ extern fn _action_binding(name: Str, handler: fn(EventContextHandle, Str) Int) A
 // ── Lifecycle ─────────────────────────────────────────────────────────
 
 extern fn _run(root: Widget) Void!Str   = "UiRun"
+extern fn _run_themed(root: Widget, black: Int, red: Int, green: Int, yellow: Int, blue: Int, magenta: Int, cyan: Int, white: Int) Void!Str   = "UiRunWithBaseColors"
 
 fn run(root: Widget) Void!Str {
   _run(root)
+}
+
+fn run_themed(root: Widget, black: Int, red: Int, green: Int, yellow: Int, blue: Int, magenta: Int, cyan: Int, white: Int) Void!Str {
+  _run_themed(root, black, red, green, yellow, blue, magenta, cyan, white)
 }
 
 // ── Event helpers ─────────────────────────────────────────────────────
