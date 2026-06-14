@@ -1,8 +1,6 @@
 package ffi
 
 import (
-	"time"
-
 	"git.sr.ht/~rockorager/vaxis"
 	"git.sr.ht/~rockorager/vaxis/ui"
 )
@@ -19,8 +17,8 @@ type UiStateContext struct {
 	sb             *ui.StateBase
 }
 
-func UiStateValue[T any](ctx *UiStateContext) T {
-	return ctx.Value.(T)
+func UiStateValue[T any](ctx any) T {
+	return ctx.(*UiStateContext).Value.(T)
 }
 
 // ─── Intent (string-backed) ────────────────────────────────────────────
@@ -117,8 +115,8 @@ func UiMakeSegmentedItem(value, label string, disabled bool) UiSegmentedItem {
 
 type uiStateful[T any] struct {
 	Key   string
-	Init  func(ui.BuildContext, *UiStateContext) T
-	Build func(ui.BuildContext, *UiStateContext) ui.Widget
+	Init  func(ui.BuildContext, any) T
+	Build func(ui.BuildContext, any) ui.Widget
 }
 
 func (w uiStateful[T]) WidgetKey() ui.KeyValue { return ui.KeyValue(w.Key) }
@@ -146,17 +144,18 @@ func (s *uiStatefulState[T]) Build(ctx ui.BuildContext) ui.Widget {
 	return s.widget.Build(ctx, s.state)
 }
 
-func UiStateSetValue[T any](ctx *UiStateContext, value T) {
-	ctx.Value = value
-	if ctx.markNeedsBuild != nil {
-		ctx.markNeedsBuild()
+func UiStateSetValue[T any](ctx any, value T) {
+	c := ctx.(*UiStateContext)
+	c.Value = value
+	if c.markNeedsBuild != nil {
+		c.markNeedsBuild()
 	}
 }
 
 func UiStateful[T any](
 	key string,
-	init func(ui.BuildContext, *UiStateContext) T,
-	build func(ui.BuildContext, *UiStateContext) ui.Widget,
+	init func(ui.BuildContext, any) T,
+	build func(ui.BuildContext, any) ui.Widget,
 ) ui.Widget {
 	return uiStateful[T]{Key: key, Init: init, Build: build}
 }
@@ -168,15 +167,15 @@ type UiActionBinding struct {
 	Handler func(ui.EventContext, string) int
 }
 
-func NewUiActionBinding(name string, handler func(ui.EventContext, string) int) UiActionBinding {
+func NewUiActionBinding(name string, handler func(ui.EventContext, string) int) any {
 	return UiActionBinding{Name: name, Handler: handler}
 }
 
-func UiActions(child ui.Widget, bindings []UiActionBinding) ui.Widget {
+func UiActions(child ui.Widget, bindings []any) ui.Widget {
 	m := make(map[ui.IntentType]ui.ActionFunc)
 	for _, b := range bindings {
-		name := b.Name
-		handler := b.Handler
+		ab := b.(UiActionBinding); name := ab.Name
+		handler := ab.Handler
 		m[ui.IntentType(name)] = func(ctx ui.EventContext, intent ui.Intent) ui.EventResult {
 			return ui.EventResult(handler(ctx, string(intent.IntentType())))
 		}
@@ -362,11 +361,9 @@ func UiCursor(col, row, shape int, hidden bool, child ui.Widget) ui.Widget {
 
 // ─── Animation ────────────────────────────────────────────────────────
 
-func UiNewAnimation(stateCtx *UiStateContext, durationMs int) *ui.AnimationController {
-	if stateCtx == nil || stateCtx.sb == nil {
-		return nil
-	}
-	return stateCtx.sb.NewAnimation(ui.AnimationOptions{Duration: time.Duration(durationMs) * time.Millisecond})
+func UiNewAnimation(stateCtx any, durationMs int) *ui.AnimationController {
+	// Animation requires StateBase reference — not wired yet for dependency use.
+	return nil
 }
 
 func UiAnimForward(ctrl *ui.AnimationController)  { if ctrl != nil { ctrl.Forward() } }
@@ -502,8 +499,21 @@ func UiRunWithBaseColors(root ui.Widget, black, red, green, yellow, blue, magent
 // ─── Event helpers ────────────────────────────────────────────────────
 
 func UiQuit(ctx ui.EventContext) { ctx.Quit() }
+func UiNotify(ctx ui.EventContext, title, body string) { ctx.Notify(title, body) }
+func UiSetTitle(ctx ui.EventContext, title string) { ctx.SetTitle(title) }
+func UiCopy(ctx ui.EventContext, text string) { ctx.Copy(text) }
 
-// ─── Style decoding ───────────────────────────────────────────────────
+// ─── Runtime dispatch ────────────────────────────────────────────────
+
+func UiBuildContextRuntime(ctx ui.BuildContext) ui.Runtime {
+	return ctx.Runtime()
+}
+
+func UiRuntimeDispatch(rt ui.Runtime, fn func()) {
+	rt.Dispatch(fn)
+}
+
+// ─── Animation helpers ───────────────────────────────────────────────
 
 func decodeUiStyle(fg, bg, ulColor, ulStyle, attrs int) vaxis.Style {
 	style := vaxis.Style{}

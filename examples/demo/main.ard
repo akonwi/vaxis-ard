@@ -1,0 +1,339 @@
+use vaxis
+use vaxis/ui
+
+// ─── Domain ───────────────────────────────────────────────────────────
+
+struct DemoState {
+  page: Int,
+  name: Str,
+  notes: Str,
+  count: Int,
+  done: Bool,
+  mode: Str,
+  dialog_open: Bool,
+}
+
+fn initial_state() DemoState {
+  DemoState{
+    page: 0, name: "", notes: "", count: 0,
+    done: false, mode: "compact", dialog_open: false,
+  }
+}
+
+fn page_count() Int { 6 }
+fn demo_quit() Str { "demo.quit" }
+fn demo_next() Str { "demo.next-page" }
+fn demo_prev() Str { "demo.previous-page" }
+fn demo_dialog() Str { "demo.toggle-dialog" }
+
+fn bold() Int { 1 }
+fn dim() Int { 2 }
+fn italic() Int { 4 }
+
+fn checkbox_label(checked: Bool) Str {
+  if checked { "checked" } else { "unchecked" }
+}
+
+fn pad_left(s: Str, width: Int) Str {
+  mut result = s
+  while result.size() < width {
+    result = " " + result
+  }
+  result
+}
+
+// ─── Home page ────────────────────────────────────────────────────────
+
+fn home_page() ui::Widget {
+  ui::column([
+    ui::styled_text("Home", -1, -1, bold()),
+    ui::text("This demo exercises the vaxis/ui widget bindings from Ard."),
+    ui::text("Use n/p to switch pages, Tab to move focus, q to quit."),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::text("Pages: Home, Text, Controls, Lists, Table, Theme"),
+  ])
+}
+
+// ─── Text page ────────────────────────────────────────────────────────
+
+fn scroll_lines() ui::Widget {
+  mut lines: [ui::Widget] = []
+  mut i = 1
+  while i <= 24 {
+    lines.push(ui::rich_text([ui::span("row " + i.to_str(), bold()), ui::span("  scrollable content", 0)], false))
+    i = i + 1
+  }
+  ui::column(lines)
+}
+
+fn text_page() ui::Widget {
+  ui::scroll_view(ui::column([
+    ui::styled_text("Text layout", -1, -1, bold()),
+    ui::rich_text([
+      ui::span("RichText spans can mix ", 0),
+      ui::span("bold", bold()),
+      ui::span(", ", 0),
+      ui::span("italic", italic()),
+      ui::span(", and normal text.", 0),
+    ], false),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::text("Vertical scroll view:"),
+    ui::sized_box(60, 4, ui::scroll_view(scroll_lines())),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::text("Bottom of text page."),
+  ]))
+}
+
+// ─── Controls page ────────────────────────────────────────────────────
+
+fn controls_page(model: DemoState, state: ui::State<DemoState>) ui::Widget {
+  ui::scroll_view(ui::column([
+    ui::styled_text("Controls", -1, -1, bold()),
+    ui::text("Name:"),
+    ui::text_field(
+      model.name, "type here", 32, false,
+      fn(ctx: ui::EventContext, value: Str) {
+        state.set(fn(mut s: DemoState) { s.name = value })
+      },
+      fn(ctx: ui::EventContext, value: Str) {},
+    ),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::text("Notes:"),
+    ui::text_area(
+      model.notes, "write a note", 48, 3, true,
+      fn(ctx: ui::EventContext, value: Str) {
+        state.set(fn(mut s: DemoState) { s.notes = value })
+      },
+    ),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::row([
+      ui::button("-", fn(ctx: ui::EventContext) {
+        state.set(fn(mut s: DemoState) { s.count = s.count - 1 })
+      }),
+      ui::text("  count: " + model.count.to_str() + "  "),
+      ui::button("+", fn(ctx: ui::EventContext) {
+        state.set(fn(mut s: DemoState) { s.count = s.count + 1 })
+      }),
+      ui::text("  "),
+      ui::button("Notify", fn(ctx: ui::EventContext) {
+        ui::notify(ctx, "Demo", "Hello from Ard + vaxis/ui")
+      }),
+      ui::text("  "),
+      ui::button("Dialog", fn(ctx: ui::EventContext) {
+        state.set(fn(mut s: DemoState) { s.dialog_open = true })
+      }),
+    ]),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::checkbox(
+      model.done, "Use checkmark style", false,
+      fn(ctx: ui::EventContext, checked: Bool) {
+        state.set(fn(mut s: DemoState) { s.done = checked })
+      },
+    ),
+    ui::text("  checkbox: " + checkbox_label(model.done)),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::radio("compact", model.mode, "Compact", fn(ctx: ui::EventContext, value: Str) {
+      state.set(fn(mut s: DemoState) { s.mode = value })
+    }),
+    ui::radio("cozy", model.mode, "Cozy", fn(ctx: ui::EventContext, value: Str) {
+      state.set(fn(mut s: DemoState) { s.mode = value })
+    }),
+    ui::radio("spacious", model.mode, "Spacious", fn(ctx: ui::EventContext, value: Str) {
+      state.set(fn(mut s: DemoState) { s.mode = value })
+    }),
+    ui::text("  radio: " + model.mode),
+  ]))
+}
+
+// ─── Lists page ───────────────────────────────────────────────────────
+
+fn sliver_rows(count: Int) [ui::Widget] {
+  mut rows: [ui::Widget] = []
+  mut i = 1
+  while i <= count {
+    rows.push(ui::text(" " + pad_left(i.to_str(), 4) + "  deploy target " + (100 + i).to_str() + "  ready"))
+    i = i + 1
+  }
+  rows
+}
+
+fn lists_page() ui::Widget {
+  let ctrl = ui::scroll_controller()
+  ui::column([
+    ui::styled_text("Lists", -1, -1, bold()),
+    ui::list_tile(ui::text("Deploy queue"), true, false, fn(ctx: ui::EventContext) {}),
+    ui::list_tile(ui::text("Checks passing"), false, false, fn(ctx: ui::EventContext) {}),
+    ui::list_tile(ui::text("Archived target"), false, true, fn(ctx: ui::EventContext) {}),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::text("Sliver list with pinned header:"),
+    ui::sized_box(60, 5, ui::custom_scroll_view(ctrl, [
+      ui::sliver_to_box(ui::text("Intro sliver scrolls away before the pinned header.")),
+      ui::sliver_pinned_header(ui::styled_text(" #  target             status", -1, -1, bold())),
+      ui::sliver_list(sliver_rows(20)),
+      ui::sliver_to_box(ui::styled_text("Footer sliver.", -1, -1, dim())),
+    ])),
+  ])
+}
+
+// ─── Table page ───────────────────────────────────────────────────────
+
+fn table_page() ui::Widget {
+  ui::column([
+    ui::styled_text("Table", -1, -1, bold()),
+    ui::text("Columns can size to content, take a fixed width, or share remaining space."),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::table(
+      [ui::table_column_intrinsic(), ui::table_column_flex(1), ui::table_column_fixed(8)],
+      2, 1,
+      [
+        ui::table_row([
+          ui::styled_text("job", -1, -1, bold()),
+          ui::styled_text("status", -1, -1, bold()),
+          ui::styled_text("id", -1, -1, bold()),
+        ]),
+        ui::table_row([ui::text("build"), ui::text("running tests"), ui::text("1024")]),
+        ui::table_row([ui::text("lint"), ui::text("waiting for worker"), ui::text("7")]),
+        ui::table_row([ui::text("deploy"), ui::text("blocked on approval"), ui::text("23")]),
+      ],
+    ),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::text("First column intrinsic, middle flexes, id column fixed at 8 cells."),
+  ])
+}
+
+// ─── Theme page ───────────────────────────────────────────────────────
+
+fn color_row(label: Str, fg: Int, bg: Int) ui::Widget {
+  ui::styled_text("  " + label, fg, bg, 0)
+}
+
+fn theme_page() ui::Widget {
+  ui::scroll_view(ui::column([
+    ui::styled_text("Theme colors", -1, -1, bold()),
+    ui::text("Styled text with color combinations:"),
+    ui::sized_box(80, 1, ui::text("")),
+    color_row("Default fg/bg", -1, -1),
+    color_row("Red on default", 1, -1),
+    color_row("Green on default", 2, -1),
+    color_row("Yellow on default", 3, -1),
+    color_row("Blue on default", 4, -1),
+    color_row("Magenta on default", 5, -1),
+    color_row("Cyan on default", 6, -1),
+    color_row("White on default", 7, -1),
+    ui::sized_box(80, 1, ui::text("")),
+    color_row("Default on black", -1, 0),
+    color_row("White on blue", 7, 4),
+    color_row("Black on yellow", 0, 3),
+    color_row("Black on white", 0, 7),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::text("Styled borders:"),
+    ui::bordered_box(-1, -1, 0, ui::text("  Thin border  ")),
+    ui::sized_box(80, 1, ui::text("")),
+    ui::decorated_box(7, 4, bold(), ui::text("  White on blue, bold  ")),
+  ]))
+}
+
+// ─── Header & Footer ──────────────────────────────────────────────────
+
+fn page_name(index: Int) Str {
+  if index == 0 { "Home" }
+  else if index == 1 { "Text" }
+  else if index == 2 { "Controls" }
+  else if index == 3 { "Lists" }
+  else if index == 4 { "Table" }
+  else if index == 5 { "Theme" }
+  else { "?" }
+}
+
+fn page_label(index: Int, page: Int) Str {
+  if index == page { "[" + page_name(index) + "]" } else { " " + page_name(index) + " " }
+}
+
+fn build_header(page: Int, state: ui::State<DemoState>) ui::Widget {
+  mut tabs: [ui::Widget] = []
+  mut i = 0
+  while i < 6 {
+    if i > 0 {
+      tabs.push(ui::sized_box(1, 1, ui::text("")))
+    }
+    tabs.push(ui::button(page_label(i, page), fn(ctx: ui::EventContext) {
+      state.set(fn(mut s: DemoState) { s.page = i })
+    }))
+    i = i + 1
+  }
+  ui::column([
+    ui::styled_text("Vaxis UI demo", -1, -1, bold()),
+    ui::text("n/p pages, Tab focus, q quit"),
+    ui::row(tabs),
+  ])
+}
+
+fn build_footer(page: Int) ui::Widget {
+  let total = page_count()
+  let label = "page " + (page + 1).to_str() + " / " + total.to_str()
+  ui::styled_text(label, -1, -1, dim())
+}
+
+// ─── Page router ──────────────────────────────────────────────────────
+
+fn build_page(model: DemoState, state: ui::State<DemoState>) ui::Widget {
+  match model.page {
+    0 => home_page(),
+    1 => text_page(),
+    2 => controls_page(model, state),
+    3 => lists_page(),
+    4 => table_page(),
+    5 => theme_page(),
+    _ => home_page(),
+  }
+}
+
+// ─── Root widget ──────────────────────────────────────────────────────
+
+fn keyboard_shortcuts() [Str:Str] {
+  ["q": demo_quit(), "n": demo_next(), "p": demo_prev(), "d": demo_dialog()]
+}
+
+fn root_widget() ui::Widget {
+  ui::stateful(
+    key: "demo",
+    init: fn(ctx: ui::BuildContext) DemoState { initial_state() },
+    build: fn(ctx: ui::BuildContext, state: ui::State<DemoState>) ui::Widget {
+      let model = state.value()
+      let content = ui::column([
+        build_header(model.page, state),
+        ui::sized_box(80, 1, ui::text("")),
+        build_page(model, state),
+        ui::sized_box(80, 1, ui::text("")),
+        build_footer(model.page),
+      ])
+      ui::shortcuts(
+        ui::actions(ui::focus(content), [
+          ui::action(demo_quit(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+            ui::quit(ctx)
+            ui::EventResult::handled
+          }),
+          ui::action(demo_next(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+            state.set(fn(mut s: DemoState) { s.page = (s.page + 1) % page_count() })
+            ui::EventResult::handled
+          }),
+          ui::action(demo_prev(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+            state.set(fn(mut s: DemoState) { s.page = (s.page + page_count() - 1) % page_count() })
+            ui::EventResult::handled
+          }),
+          ui::action(demo_dialog(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+            state.set(fn(mut s: DemoState) { s.dialog_open = not s.dialog_open })
+            ui::EventResult::handled
+          }),
+        ]),
+        keyboard_shortcuts(),
+      )
+    },
+  )
+}
+
+// ─── Entrypoint ───────────────────────────────────────────────────────
+
+fn main() Void {
+  ui::run(root_widget()).expect("run demo")
+}
