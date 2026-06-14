@@ -64,9 +64,8 @@ pass file descriptors, which Ard does not expose.
 
 ### `Options.EventQueueSize`
 
-Tuning parameter for the event channel buffer. Default (1024) is sufficient
-for all current consumers. Easy to add as an `Int?` field on `Options` when
-needed.
+Tuning parameter for the event channel buffer.
+**Done** — added as `Int?` field on `Options`, passed to `OpenWith`.
 
 ### `PostEventBlocking`
 
@@ -74,9 +73,8 @@ needed.
 func (vx *Vaxis) PostEventBlocking(ev Event)
 ```
 
-Blocks if the event queue is full instead of dropping the event. The
-non‑blocking `post_event` suffices for typical use. The blocking variant is
-one additional Go function and one additional `extern fn`.
+Blocks if the event queue is full instead of dropping the event.
+**Done** — bound as `raw_post_event_blocking` / `app.post_event_blocking()`.
 
 ### `Color.asIndex()` — full vaxis color table
 

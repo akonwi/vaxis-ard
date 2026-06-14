@@ -15,19 +15,20 @@ import (
 // ─── Lifecycle ────────────────────────────────────────────────────────────
 
 func Open(title string) (*vaxis.Vaxis, error) {
-	return OpenWith(title, 1) // default: disableKittyKeyboard=true
+	return OpenWith(title, 1, 0) // default: disableKittyKeyboard=true
 }
 
 // OpenWith creates a vaxis instance with bitpacked options.
 // opts bits: 0=disableKittyKeyboard 1=disableMouse 2=noSignals
 // 3=enableSGRPixels 4-7=csiuBitMask
-func OpenWith(title string, opts int) (*vaxis.Vaxis, error) {
+func OpenWith(title string, opts int, eventQueueSize int) (*vaxis.Vaxis, error) {
 	vx, err := vaxis.New(vaxis.Options{
 		DisableKittyKeyboard: opts&1 != 0,
 		DisableMouse:         opts&2 != 0,
 		NoSignals:            opts&4 != 0,
 		EnableSGRPixels:      opts&8 != 0,
 		CSIuBitMask:          vaxis.CSIuBitMask((opts >> 4) & 0xF),
+		EventQueueSize:       eventQueueSize,
 	})
 	if err != nil {
 		return nil, err
@@ -312,6 +313,13 @@ func PostEvent(vx *vaxis.Vaxis, event string) {
 type customEvent string
 
 func (customEvent) isEvent() {}
+
+// PostEventBlocking injects a custom event, blocking if the queue is full.
+func PostEventBlocking(vx *vaxis.Vaxis, event string) {
+	if vx != nil && event != "" {
+		vx.PostEventBlocking(customEvent(event))
+	}
+}
 
 // SyncFunc queues a function to run on the main thread; a Redraw follows.
 func SyncFunc(vx *vaxis.Vaxis, fn func()) {

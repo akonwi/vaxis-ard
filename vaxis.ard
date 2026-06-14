@@ -13,7 +13,7 @@ extern type RawImage = "vaxis.Image"
 
 private extern fn raw_open(title: Str) RawVaxis!Str = "Open"
 
-private extern fn raw_open_with(title: Str, opts: Int) RawVaxis!Str = "OpenWith"
+private extern fn raw_open_with(title: Str, opts: Int, event_queue_size: Int) RawVaxis!Str = "OpenWith"
 
 private extern fn raw_close(vx: RawVaxis) Void!Str = "Close"
 
@@ -93,6 +93,8 @@ private extern fn raw_hide_cursor(vx: RawVaxis) Void = "HideCursor"
 private extern fn raw_read_key(vx: RawVaxis) Str!Str = "ReadEvent"
 
 private extern fn raw_post_event(vx: RawVaxis, event: Str) Void = "PostEvent"
+
+private extern fn raw_post_event_blocking(vx: RawVaxis, event: Str) Void = "PostEventBlocking"
 
 private extern fn raw_sync_func(vx: RawVaxis, callback: fn() Void) Void = "SyncFunc"
 
@@ -991,6 +993,7 @@ struct Options {
   no_signals: Bool?,
   csiu_bit_mask: Int?,
   enable_sgr_pixels: Bool?,
+  event_queue_size: Int?,
 }
 
 fn default_options() Options {
@@ -1014,7 +1017,7 @@ fn pack_options(opts: Options) Int {
 
 fn app_open(title: Str, opts: Options?) App!Str {
   let opts = opts.or(default_options())
-  let vx = try raw_open_with(title, pack_options(opts))
+  let vx = try raw_open_with(title, pack_options(opts), opts.event_queue_size.or(0))
   Result::ok(App{ vx: vx, width: raw_width(vx), height: raw_height(vx) })
 }
 
@@ -1074,6 +1077,10 @@ impl App {
 
   fn mut post_event(event: Str) Void {
     raw_post_event(self.vx, event)
+  }
+
+  fn mut post_event_blocking(event: Str) Void {
+    raw_post_event_blocking(self.vx, event)
   }
 
   fn mut sync_func(callback: fn() Void) Void {
