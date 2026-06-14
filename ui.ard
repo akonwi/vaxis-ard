@@ -66,7 +66,13 @@ fn sized_box(width: Int, height: Int, child: Widget) Widget { _sized_box(width, 
 extern fn _text(value: Str) Widget   = "UiText"
 extern fn _button(label: Str, on_pressed: fn(EventContextHandle)) Widget   = "UiButton"
 
+extern fn _styled_text(value: Str, fg: Int, bg: Int, ul_color: Int, ul_style: Int, attrs: Int) Widget = "UiStyledText"
+
 fn text(value: Str) Widget { _text(value) }
+
+fn styled_text(value: Str, fg: Int, bg: Int, attrs: Int) Widget {
+  _styled_text(value, fg, bg, -1, 0, attrs)
+}
 
 fn button(label: Str, on_pressed: fn(EventContext)) Widget {
   _button(
