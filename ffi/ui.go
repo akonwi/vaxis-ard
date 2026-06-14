@@ -1,6 +1,7 @@
 package ffi
 
 import (
+	"git.sr.ht/~rockorager/vaxis"
 	"git.sr.ht/~rockorager/vaxis/ui"
 )
 
@@ -57,8 +58,16 @@ func UiText(value string) ui.Widget {
 	return ui.Text{Value: value}
 }
 
+func UiStyledText(value string, fg, bg, ulColor, ulStyle, attrs int) ui.Widget {
+	return ui.Text{Value: value, Style: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs)}
+}
+
 func UiButton(label string, onPressed func(ui.EventContext)) ui.Widget {
 	return ui.Button{Label: label, OnPressed: onPressed}
+}
+
+func UiCheckbox(checked bool, disabled bool, label string, onChanged func(ui.EventContext, bool)) ui.Widget {
+	return ui.Checkbox{Checked: checked, Disabled: disabled, Label: label, OnChanged: onChanged}
 }
 
 // ─── Stateful widget ──────────────────────────────────────────────────
@@ -183,3 +192,41 @@ func UiRun(root ui.Widget) error {
 // ─── Event helpers ────────────────────────────────────────────────────
 
 func UiQuit(ctx ui.EventContext) { ctx.Quit() }
+
+// ─── Style decoding ───────────────────────────────────────────────────
+
+func decodeUiStyle(fg, bg, ulColor, ulStyle, attrs int) vaxis.Style {
+	style := vaxis.Style{}
+	if fg >= 0 {
+		style.Foreground = colorFromInt(fg)
+	}
+	if bg >= 0 {
+		style.Background = colorFromInt(bg)
+	}
+	if ulColor >= 0 {
+		style.UnderlineColor = colorFromInt(ulColor)
+	}
+	style.UnderlineStyle = vaxis.UnderlineStyle(ulStyle)
+	if attrs&1 != 0 {
+		style.Attribute |= vaxis.AttrBold
+	}
+	if attrs&2 != 0 {
+		style.Attribute |= vaxis.AttrDim
+	}
+	if attrs&4 != 0 {
+		style.Attribute |= vaxis.AttrItalic
+	}
+	if attrs&8 != 0 {
+		style.Attribute |= vaxis.AttrBlink
+	}
+	if attrs&16 != 0 {
+		style.Attribute |= vaxis.AttrReverse
+	}
+	if attrs&32 != 0 {
+		style.Attribute |= vaxis.AttrInvisible
+	}
+	if attrs&64 != 0 {
+		style.Attribute |= vaxis.AttrStrikethrough
+	}
+	return style
+}

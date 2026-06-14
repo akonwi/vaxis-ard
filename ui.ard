@@ -75,6 +75,24 @@ fn button(label: Str, on_pressed: fn(EventContext)) Widget {
   )
 }
 
+// ── Checkbox ──────────────────────────────────────────────────────────
+
+extern fn _checkbox(checked: Bool, disabled: Bool, label: Str, on_changed: fn(EventContextHandle, Bool)) Widget = "UiCheckbox"
+
+fn checkbox(checked: Bool, label: Str, disabled: Bool?, on_changed: fn(EventContext, Bool)) Widget {
+  mut d = false
+  match disabled {
+    v => { d = v },
+    _ => {},
+  }
+  _checkbox(
+    checked, d, label,
+    fn(ctx: EventContextHandle, next: Bool) {
+      on_changed(EventContext{handle: ctx}, next)
+    },
+  )
+}
+
 // ── Divider ───────────────────────────────────────────────────────────
 
 extern fn _divider() Widget   = "UiDivider"

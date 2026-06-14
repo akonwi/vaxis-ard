@@ -38,18 +38,16 @@ fn done_count(todos: [Todo]) Int {
   count
 }
 
-fn status_mark(done: Bool) Str {
-  if done { "[x]" } else { "[ ]" }
-}
-
 fn selected_mark(index: Int, selected: Int) Str {
   if index == selected { ">" } else { " " }
 }
 
-fn todo_text(todo: Todo, index: Int, selected: Int) ui::Widget {
+fn todo_row(todo: Todo, index: Int, selected: Int) ui::Widget {
   let mark = selected_mark(index, selected)
-  let check = status_mark(todo.done)
-  ui::text(mark + " " + check + " " + todo.title)
+  ui::row([
+    ui::text(mark + " "),
+    ui::checkbox(checked: todo.done, label: todo.title, disabled: true, on_changed: fn(ctx: ui::EventContext, next: Bool) {}),
+  ])
 }
 
 fn build_list(model: TodoUiState) [ui::Widget] {
@@ -64,14 +62,14 @@ fn build_list(model: TodoUiState) [ui::Widget] {
   mut i = 0
   while i < model.todos.size() {
     let todo = model.todos.at(i)
-    children.push(ui::padding(1, todo_text(todo, i, model.selected)))
+    children.push(ui::padding(1, todo_row(todo, i, model.selected)))
     i = i + 1
   }
 
   let done = done_count(model.todos)
   children.push(ui::divider())
   children.push(ui::padding(1, ui::text("Done: " + done.to_str() + " / " + model.todos.size().to_str())))
-  children.push(ui::padding(1, ui::text("j/k:move  enter:toggle  e:edit  a:add  d:delete  q:quit")))
+  children.push(ui::padding(1, ui::text("j/k:move  space:toggle  e:edit  a:add  d:delete  q:quit")))
 
   children
 }
