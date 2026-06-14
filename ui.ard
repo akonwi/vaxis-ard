@@ -132,6 +132,34 @@ fn list_tile(title: Widget, selected: Bool, disabled: Bool?, on_pressed: fn(Even
   )
 }
 
+// ── ProgressBar ───────────────────────────────────────────────────────
+
+extern fn _progress_bar(value: Float, width: Int, filled_fg: Int, filled_bg: Int, filled_attrs: Int, empty_fg: Int, empty_bg: Int, empty_attrs: Int) Widget = "UiProgressBar"
+
+fn progress_bar(value: Float, width: Int, filled_bg: Int, empty_bg: Int) Widget {
+  _progress_bar(value, width, -1, filled_bg, 0, -1, empty_bg, 0)
+}
+
+// ── RichText ──────────────────────────────────────────────────────────
+
+extern type TextSpan = "ffi.UiTextSpan"
+
+extern fn _rich_text(spans: [TextSpan], soft_wrap: Bool) Widget = "UiRichText"
+extern fn _span(text: Str, fg: Int, bg: Int, attrs: Int) TextSpan = "UiMakeSpan"
+
+fn span(text: Str, attrs: Int) TextSpan {
+  _span(text, -1, -1, attrs)
+}
+
+fn rich_text(spans: [TextSpan], soft_wrap: Bool?) Widget {
+  mut sw = false
+  match soft_wrap {
+    v => { sw = v },
+    _ => {},
+  }
+  _rich_text(spans, sw)
+}
+
 // ── Basic widgets ─────────────────────────────────────────────────────
 
 extern fn _text(value: Str) Widget   = "UiText"

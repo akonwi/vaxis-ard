@@ -228,6 +228,35 @@ func UiListTile(title ui.Widget, selected bool, disabled bool, onPressed func(ui
 	return ui.ListTile{Title: title, Selected: selected, Disabled: disabled, OnPressed: onPressed}
 }
 
+func UiProgressBar(value float64, width int, filledFg, filledBg, filledUlColor, filledUlStyle, filledAttrs, emptyFg, emptyBg, emptyUlColor, emptyUlStyle, emptyAttrs int) ui.Widget {
+	return ui.ProgressBar{
+		Value:       value,
+		Width:       width,
+		FilledStyle: decodeUiStyle(filledFg, filledBg, filledUlColor, filledUlStyle, filledAttrs),
+		EmptyStyle:  decodeUiStyle(emptyFg, emptyBg, emptyUlColor, emptyUlStyle, emptyAttrs),
+	}
+}
+
+type UiTextSpan struct {
+	Text           string
+	Fg, Bg, UlColor, UlStyle, Attrs int
+}
+
+func UiRichText(spans []UiTextSpan, softWrap bool) ui.Widget {
+	s := make([]ui.TextSpan, len(spans))
+	for i, sp := range spans {
+		s[i] = ui.TextSpan{
+			Text:  sp.Text,
+			Style: decodeUiStyle(sp.Fg, sp.Bg, sp.UlColor, sp.UlStyle, sp.Attrs),
+		}
+	}
+	return ui.RichText{Spans: s, SoftWrap: softWrap}
+}
+
+func UiMakeSpan(text string, fg, bg, attrs int) UiTextSpan {
+	return UiTextSpan{Text: text, Fg: fg, Bg: bg, Attrs: attrs}
+}
+
 // ─── Scroll ───────────────────────────────────────────────────────────
 
 func UiScrollView(child ui.Widget) ui.Widget {
