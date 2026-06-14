@@ -67,22 +67,31 @@ use vaxis/ui       # ui widgets: text, column, row, stateful, actions, shortcuts
 - Root module externs use qualified names (`= "vaxis.FnName"`)
 - Nested module externs use unqualified names (`= "FnName"`) — they resolve to `package ffi` in the same dependency
 
-## vaxis/ui P0 bindings
+## vaxis/ui bindings (complete)
+
+All public vaxis/ui widgets and types are bound. See `ui.ard` and `ffi/ui.go`.
 
 | Category | Widgets / Types |
 |---|---|
-| Layout | `row`, `column`, `center`, `padding`, `expanded`, `sized_box` |
-| Basic | `text`, `button`, `divider` |
-| State | `stateful`, `State<T>`, `BuildContext` |
-| Input | `shortcuts`, `actions`, `action`, `focus`, `EventContext`, `EventResult` |
+| Layout | `row`, `column`, `center`, `padding`, `expanded`, `sized_box`, `align`, `constrained_box`, `stack`, `flex`, `positioned` |
+| Basic | `text`, `styled_text`, `button`, `divider`, `rich_text`, `span` |
+| Input | `text_field`, `text_area`, `checkbox`, `radio`, `segmented_control`, `shortcuts`, `actions`, `action`, `focus`, `focus_scope` |
+| Scroll | `scroll_view`, `scrollbar`, `scroll_pane`, `scroll_pane_controller`, `custom_scroll_view`, slivers (`sliver_to_box`, `sliver_pinned_header`, `sliver_fill_remaining`, `sliver_list`) |
+| State | `stateful`, `State<T>`, `BuildContext`, `EventContext`, `EventResult` |
+| Styling | `decorated_box`, `bordered_box`, `progress_bar` |
+| Polish | `dialog`, `modal_barrier`, `list_tile`, `overlay`, `overlay_modal`, `command_palette`, `cmd_item` |
+| Selection | `selection_area`, `selection_container` |
+| Table | `table`, `table_row`, `table_column_intrinsic`/`_fixed`/`_flex` |
+| Cursor | `cursor` (with shape constants) |
+| Animation | `animation_controller`, `anim_forward`/`_reset`/`_stop`, `anim_value` |
+| Theme | `run_themed` (via `WithBaseColors`) |
 | Lifecycle | `run`, `quit` |
 
-## vaxis/ui P1 bindings
+### Layout constants
 
-| Category | Widgets / Types |
-|---|---|
-| Input | `text_field` (controlled, with `on_changed`/`on_submitted`) |
-| Scroll | `scroll_view` |
+- Flex: `AXIS_HORIZONTAL`/`_VERTICAL`, `MAIN_SIZE_MAX`/`_MIN`, `MAIN_ALIGN_START`/`_END`/`_CENTER`/`_BETWEEN`/`_AROUND`/`_EVENLY`, `CROSS_ALIGN_CENTER`/`_START`/`_END`/`_STRETCH`
+- Scroll: `SCROLL_VERTICAL`, `SCROLL_HORIZONTAL`
+- Cursor: `CURSOR_DEFAULT`, `CURSOR_BLOCK`/`_BLINKING`, `CURSOR_UNDERLINE`/`_BLINKING`, `CURSOR_BEAM`/`_BLINKING`
 
 ### Stateful widget pattern
 
