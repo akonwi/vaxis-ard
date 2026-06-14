@@ -263,6 +263,26 @@ func UiScrollView(child ui.Widget) ui.Widget {
 	return ui.ScrollView{Child: child}
 }
 
+func UiScrollbar(axis int, child ui.Widget) ui.Widget {
+	return ui.Scrollbar{Axis: ui.ScrollAxis(axis), Child: child}
+}
+
+func UiScrollPaneController() *ui.ScrollPaneController {
+	return &ui.ScrollPaneController{}
+}
+
+func UiScrollPane(controller *ui.ScrollPaneController, child ui.Widget) ui.Widget {
+	return ui.ScrollPane{Controller: controller, Child: child}
+}
+
+func UiScrollPaneScrollBy(controller *ui.ScrollPaneController, cols, rows int) bool {
+	return controller.ScrollBy(cols, rows)
+}
+
+func UiScrollPaneScrollTo(controller *ui.ScrollPaneController, col, row int) bool {
+	return controller.ScrollTo(col, row)
+}
+
 // ─── App runner ───────────────────────────────────────────────────────
 
 func UiRun(root ui.Widget) error {
