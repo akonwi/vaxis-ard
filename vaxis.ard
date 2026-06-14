@@ -84,7 +84,7 @@ extern fn raw_hide_cursor(vx: RawVaxis) Void = "HideCursor"
 
 // ── Events (Go multiplexes stdin + signals, normalizes to strings)
 
-extern fn raw_read_key(vx: RawVaxis) Str!Str = "ReadKey"
+extern fn raw_read_key(vx: RawVaxis) Str!Str = "ReadEvent"
 
 // ── Capabilities
 
@@ -211,11 +211,23 @@ struct ResizeEvent {
   rows: Int,
 }
 
+struct FocusInEvent {}
+
+struct FocusOutEvent {}
+
+struct PasteStartEvent {}
+
+struct PasteEndEvent {}
+
 struct RedrawEvent {}
 
 struct QuitEvent {}
 
-type Event = KeyEvent | ResizeEvent | RedrawEvent | QuitEvent
+struct ColorThemeEvent {
+  dark: Bool,
+}
+
+type Event = KeyEvent | ResizeEvent | FocusInEvent | FocusOutEvent | PasteStartEvent | PasteEndEvent | RedrawEvent | QuitEvent | ColorThemeEvent
 
 // ─── Helpers (must be defined before use in impl blocks) ───────────────
 
@@ -250,12 +262,29 @@ fn style_ul_style(ul: UnderlineStyle) Int {
   }
 }
 
-fn parse_event(key: Str) Event {
-  match key {
-    "q" => QuitEvent{},
-    "redraw" => RedrawEvent{},
-    _ => KeyEvent{ key: key },
+fn parse_event(raw: Str) Event {
+  mut event: Event = KeyEvent{ key: raw }
+  if raw == "redraw" { event = RedrawEvent{} }
+  if raw == "quit" { event = QuitEvent{} }
+  if raw == "focus:in" { event = FocusInEvent{} }
+  if raw == "focus:out" { event = FocusOutEvent{} }
+  if raw == "paste:start" { event = PasteStartEvent{} }
+  if raw == "paste:end" { event = PasteEndEvent{} }
+  if raw == "theme:dark" { event = ColorThemeEvent{ dark: true } }
+  if raw == "theme:light" { event = ColorThemeEvent{ dark: false } }
+  if raw.starts_with("key:") {
+    let key = raw.replace("key:", "")
+    event = KeyEvent{ key: key }
   }
+  if raw.starts_with("resize:") {
+    let split = raw.split(":")
+    let cols_str = split.at(1)
+    let rows_str = split.at(2)
+    let cols = Int::from_str(cols_str).or(80)
+    let rows = Int::from_str(rows_str).or(24)
+    event = ResizeEvent{ cols: cols, rows: rows }
+  }
+  event
 }
 
 // ─── Style constructors and impl ──────────────────────────────────────
@@ -570,7 +599,11 @@ impl App {
   }
 
   fn mut read_key() Str!Str {
-    raw_read_key(self.vx)
+    let raw = try raw_read_key(self.vx)
+    mut key = "redraw"
+    if raw.starts_with("key:") { key = raw.replace("key:", "") }
+    if raw == "quit" { key = "q" }
+    Result::ok(key)
   }
 
   fn mut read_event() Event!Str {

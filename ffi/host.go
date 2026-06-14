@@ -1,6 +1,7 @@
 package ffi
 
 import (
+	"fmt"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -186,9 +187,18 @@ func HideCursor(vx *vaxis.Vaxis) {
 
 // ─── Events ───────────────────────────────────────────────────────────────
 
-func ReadKey(vx *vaxis.Vaxis) (string, error) {
+// ReadEvent reads the next event from vaxis and encodes it as a string:
+//
+//	"key:<normalized>"  — key press (e.g. "key:r", "key:up", "key:backspace")
+//	"resize:<cols>:<rows>" — terminal resize
+//	"focus:in" / "focus:out" — focus change
+//	"paste:start" / "paste:end" — bracketed paste
+//	"theme:dark" / "theme:light" — color scheme change
+//	"redraw"             — redraw request
+//	"quit"               — application closing
+func ReadEvent(vx *vaxis.Vaxis) (string, error) {
 	if vx == nil {
-		return "q", nil
+		return "quit", nil
 	}
 	for ev := range vx.Events() {
 		switch ev := ev.(type) {
@@ -197,31 +207,46 @@ func ReadKey(vx *vaxis.Vaxis) (string, error) {
 				continue
 			}
 			if key := appKeyFromVaxisKey(ev); key != "" {
-				return key, nil
+				return "key:" + key, nil
 			}
 			switch ev.String() {
 			case "Ctrl+c", "Esc":
-				return "q", nil
+				return "quit", nil
 			case "Up":
-				return "up", nil
+				return "key:up", nil
 			case "Down":
-				return "down", nil
+				return "key:down", nil
 			case "Left":
-				return "left", nil
+				return "key:left", nil
 			case "Right":
-				return "right", nil
+				return "key:right", nil
 			case "Enter", "Space":
-				return "select", nil
+				return "key:select", nil
 			case "BackSpace":
-				return "backspace", nil
+				return "key:backspace", nil
 			}
-		case vaxis.Resize, vaxis.Redraw:
+		case vaxis.Resize:
+			return fmt.Sprintf("resize:%d:%d", ev.Cols, ev.Rows), nil
+		case vaxis.Redraw:
 			return "redraw", nil
 		case vaxis.QuitEvent:
-			return "q", nil
+			return "quit", nil
+		case vaxis.FocusIn:
+			return "focus:in", nil
+		case vaxis.FocusOut:
+			return "focus:out", nil
+		case vaxis.PasteStartEvent:
+			return "paste:start", nil
+		case vaxis.PasteEndEvent:
+			return "paste:end", nil
+		case vaxis.ColorThemeUpdate:
+			if ev.Mode == vaxis.DarkMode {
+				return "theme:dark", nil
+			}
+			return "theme:light", nil
 		}
 	}
-	return "q", nil
+	return "quit", nil
 }
 
 func drainStartupEvents(vx *vaxis.Vaxis) {
