@@ -62,11 +62,6 @@ pass file descriptors, which Ard does not expose.
 
 ## Skipped — judged unnecessary for now
 
-### `Options.EventQueueSize`
-
-Tuning parameter for the event channel buffer.
-**Done** — added as `Int?` field on `Options`, passed to `OpenWith`.
-
 ### `PostEventBlocking`
 
 ```go
