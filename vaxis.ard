@@ -94,6 +94,8 @@ private extern fn raw_read_key(vx: RawVaxis) Str!Str = "ReadEvent"
 
 private extern fn raw_post_event(vx: RawVaxis, event: Str) Void = "PostEvent"
 
+private extern fn raw_sync_func(vx: RawVaxis, callback: fn() Void) Void = "SyncFunc"
+
 // ── Capabilities
 
 private extern fn raw_can_rgb(vx: RawVaxis) Bool = "CanRGB"
@@ -1072,6 +1074,10 @@ impl App {
 
   fn mut post_event(event: Str) Void {
     raw_post_event(self.vx, event)
+  }
+
+  fn mut sync_func(callback: fn() Void) Void {
+    raw_sync_func(self.vx, callback)
   }
 
   fn root_window() Window {

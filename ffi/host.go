@@ -313,6 +313,13 @@ type customEvent string
 
 func (customEvent) isEvent() {}
 
+// SyncFunc queues a function to run on the main thread; a Redraw follows.
+func SyncFunc(vx *vaxis.Vaxis, fn func()) {
+	if vx != nil {
+		vx.SyncFunc(fn)
+	}
+}
+
 // ReadEvent reads the next event from vaxis and encodes it as a string:
 //
 //	"key:<normalized>"  — key press (e.g. "key:r", "key:up", "key:backspace")
