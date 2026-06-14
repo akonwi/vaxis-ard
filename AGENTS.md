@@ -77,6 +77,13 @@ use vaxis/ui       # ui widgets: text, column, row, stateful, actions, shortcuts
 | Input | `shortcuts`, `actions`, `action`, `focus`, `EventContext`, `EventResult` |
 | Lifecycle | `run`, `quit` |
 
+## vaxis/ui P1 bindings
+
+| Category | Widgets / Types |
+|---|---|
+| Input | `text_field` (controlled, with `on_changed`/`on_submitted`) |
+| Scroll | `scroll_view` |
+
 ### Stateful widget pattern
 
 ```ard
@@ -148,6 +155,8 @@ nothing regressed.
 - **No `.slice()` on `Str`**: use `for ch in text` for grapheme iteration
 - **No generic trait bounds** (yet): unconstrained generics are fine for TUI use cases
 - **No pointer types**: use `mut T` for mutable references, `extern type` for opaque FFI handles
+- **`list.push()` requires local target**: cannot call `.push()` on a list captured from an enclosing scope (e.g. inside closures). Extract list mutations into free functions that return a new list.
+- **`if/else` as value only works as the last expression in a function**: cannot use `let x = if ... { ... } else { ... }`. Use `mut` with separate `if` assignments instead.
 - **`Void!Str` returns need `Result::ok(())`**: fallible functions must explicitly wrap success
 
 ## Dependencies

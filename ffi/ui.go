@@ -155,6 +155,25 @@ func UiDivider() ui.Widget {
 	return ui.Divider{}
 }
 
+// ─── Text input ───────────────────────────────────────────────────────
+
+func UiTextField(value, placeholder string, minWidth int, obscure bool, onChanged func(ui.EventContext, string), onSubmitted func(ui.EventContext, string)) ui.Widget {
+	return ui.TextField{
+		Value:       value,
+		Placeholder: placeholder,
+		MinWidth:    minWidth,
+		ObscureText: obscure,
+		OnChanged:   onChanged,
+		OnSubmitted: onSubmitted,
+	}
+}
+
+// ─── Scroll ───────────────────────────────────────────────────────────
+
+func UiScrollView(child ui.Widget) ui.Widget {
+	return ui.ScrollView{Child: child}
+}
+
 // ─── App runner ───────────────────────────────────────────────────────
 
 func UiRun(root ui.Widget) error {

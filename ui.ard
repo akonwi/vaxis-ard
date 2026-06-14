@@ -81,6 +81,41 @@ extern fn _divider() Widget   = "UiDivider"
 
 fn divider() Widget { _divider() }
 
+// ── Text input ───────────────────────────────────────────────────────
+
+extern fn _text_field(
+  value: Str,
+  placeholder: Str,
+  min_width: Int,
+  obscure: Bool,
+  on_changed: fn(EventContextHandle, Str),
+  on_submitted: fn(EventContextHandle, Str),
+) Widget = "UiTextField"
+
+fn text_field(
+  value: Str,
+  placeholder: Str,
+  min_width: Int,
+  obscure: Bool,
+  on_changed: fn(EventContext, Str),
+  on_submitted: fn(EventContext, Str),
+) Widget {
+  _text_field(
+    value,
+    placeholder,
+    min_width,
+    obscure,
+    fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) },
+    fn(ctx: EventContextHandle, submitted: Str) { on_submitted(EventContext{handle: ctx}, submitted) },
+  )
+}
+
+// ── Scroll ───────────────────────────────────────────────────────────
+
+extern fn _scroll_view(child: Widget) Widget = "UiScrollView"
+
+fn scroll_view(child: Widget) Widget { _scroll_view(child) }
+
 // ── Actions ───────────────────────────────────────────────────────────
 
 extern fn _actions(child: Widget, bindings: [ActionBinding]) Widget   = "UiActions"
