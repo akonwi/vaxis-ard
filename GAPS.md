@@ -13,6 +13,7 @@ written and passes as a standalone Ard file, but the Ard compiler panics
 consumed via `[dependencies]`. The root cause is a compiler bug (the
 checker does not recover gracefully from a type‑resolution failure inside a
 `match` expression with name‑capture patterns on a type union).
+Tracked at: https://github.com/akonwi/ard/issues/222
 
 ### `ParseStyledString`
 
