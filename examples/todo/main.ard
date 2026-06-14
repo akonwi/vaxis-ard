@@ -43,19 +43,13 @@ fn selected_mark(index: Int, selected: Int) Str {
 }
 
 fn todo_row(todo: Todo, index: Int, selected: Int) ui::Widget {
-  let mark = selected_mark(index, selected)
-  mut check_text = " "
-  if todo.done { check_text = "✓" }
-  let label = check_text + " " + todo.title
-  // style: bold if selected, dim if done
   let is_sel = index == selected
-  let is_done = todo.done
   mut attrs = 0
   if is_sel { attrs = 1 }
-  if is_done { attrs = attrs + 2 }
+  let mark_text = ui::styled_text(selected_mark(index, selected), fg: -1, bg: -1, attrs: attrs)
   ui::row([
-    ui::text(mark + " "),
-    ui::styled_text(label, fg: -1, bg: -1, attrs: attrs),
+    mark_text,
+    ui::checkbox(checked: todo.done, label: todo.title, disabled: true, on_changed: fn(ctx: ui::EventContext, next: Bool) {}),
   ])
 }
 
