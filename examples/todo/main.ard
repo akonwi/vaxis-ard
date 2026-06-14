@@ -1,9 +1,16 @@
 use vaxis
+use vaxis/ui
 
-// ─── Todo types ───────────────────────────────────────────────────────
+// ─── Domain types ─────────────────────────────────────────────────────
 
 struct Todo {
-  title: Str, done: Bool,
+  title: Str,
+  done: Bool,
+}
+
+struct TodoUiState {
+  todos: [Todo],
+  selected: Int,
 }
 
 fn initial_todos() [Todo] {
@@ -11,213 +18,119 @@ fn initial_todos() [Todo] {
     Todo{ title: "Wire project Go FFI", done: true },
     Todo{ title: "Build a Vaxis counter", done: true },
     Todo{ title: "Try a Vaxis todo list", done: false },
+    Todo{ title: "Rewrite with vaxis/ui widgets", done: false },
   ]
 }
 
-fn status(done: Bool) Str {
-  match done {
-    true => "[x]",
-    false => "[ ]",
-  }
-}
-
-fn selected_prefix(index: Int, selected: Int) Str {
-  match index == selected {
-    true => "> ",
-    false => "  ",
-  }
-}
-
-fn todo_title(todo: Todo) Str {
-  mut res = todo.title
-  if res.is_empty() { res = "<untitled>" }
-  res
-}
-
-fn todo_line(todo: Todo, index: Int, selected: Int, editing: Bool, editing_index: Int, draft: Str) Str {
-  mut title = todo_title(todo)
-  if editing and index == editing_index { title = draft + "_" }
-  selected_prefix(index, selected) + status(todo.done) + " " + title
+fn clamp(n: Int, max: Int) Int {
+  if n < 0 { 0 } else if n >= max { max - 1 } else { n }
 }
 
 fn done_count(todos: [Todo]) Int {
   mut count = 0
-  for todo in todos { if todo.done { count = count + 1 } }
+  for todo in todos {
+    if todo.done { count = count + 1 }
+  }
   count
 }
 
-fn clamp_selection(selected: Int, todos: [Todo]) Int {
-  mut res = selected
-  if todos.size() == 0 { res = 0 }
-  else if res < 0 { res = 0 }
-  else if res >= todos.size() { res = todos.size() - 1 }
-  res
+fn status_mark(done: Bool) Str {
+  if done { "[x]" } else { "[ ]" }
 }
 
-fn delete_at(todos: [Todo], selected: Int) [Todo] {
-  mut out: [Todo] = []
-  for todo, index in todos {
-    if not index == selected { out.push(todo) }
-  }
-  out
+fn selected_mark(index: Int, selected: Int) Str {
+  if index == selected { ">" } else { " " }
 }
 
-fn editable_key(key: Str) Bool {
-  key.size() == 1 and not key == "\n"
+fn todo_row(todo: Todo, index: Int, selected: Int) ui::Widget {
+  let mark = selected_mark(index, selected)
+  let check = status_mark(todo.done)
+  ui::text(mark + " " + check + " " + todo.title)
 }
 
-fn save_edit(todos: [Todo], editing_index: Int, draft: Str) [Todo] {
-  mut out = todos
-  if editing_index >= 0 and editing_index < out.size() {
-    let todo = out.at(editing_index)
-    let updated_title = draft.trim()
-    out.set(editing_index, Todo{ title: updated_title, done: todo.done })
-  }
-  out
-}
+fn build_children(todos: [Todo], selected: Int) [ui::Widget] {
+  mut children: [ui::Widget] = []
+  children.push(ui::padding(1, ui::text("Vaxis/ui Todo")))
+  children.push(ui::divider())
 
-// ─── Drawing ──────────────────────────────────────────────────────────
-
-fn draw_list(mut win: vaxis::Window, todos: [Todo], selected: Int, editing: Bool, editing_index: Int, draft: Str) {
-  mut row = 6
   if todos.size() == 0 {
-    win.write(2, row, "  No todos. Press a to add one.", vaxis::default_style())
+    children.push(ui::padding(1, ui::text("  No todos. Press a to add one.")))
   } else {
     for todo, index in todos {
-      win.write(2, row, todo_line(todo, index, selected, editing, editing_index, draft), vaxis::default_style())
-      row = row + 1
-    }
-  }
-}
-
-fn draw(mut app: vaxis::App, todos: [Todo], selected: Int, message: Str, editing: Bool, editing_index: Int, draft: Str) Void!Str {
-  mut win = app.root_window()
-  win.clear()
-
-  let bold = vaxis::default_style().with_bold(true)
-  let dim = vaxis::default_style().with_dim(true)
-  let plain = vaxis::default_style()
-
-  win.write(2, 1, "Ard + Vaxis Todo", bold)
-  win.write(2, 2, "────────────────", dim)
-  win.write(2, 4, "Done: " + done_count(todos).to_str() + " / " + todos.size().to_str(), plain)
-  draw_list(win, todos, selected, editing, editing_index, draft)
-  win.write(2, 15, message, plain)
-  if editing {
-    win.write(2, 17, "Editing: type title. Enter saves. Backspace deletes. q cancels.", dim)
-  } else {
-    win.write(2, 17, "Move: up/down or k/j. Toggle: enter. Edit: e. a adds. d deletes.", dim)
-    win.write(2, 18, "r resets. q quits.", dim)
-  }
-
-  try app.render()
-  Result::ok(())
-}
-
-// ─── App logic ────────────────────────────────────────────────────────
-
-fn run_todo(mut app: vaxis::App) Void!Str {
-  mut todos = initial_todos()
-  mut selected = 0
-  mut message = "Toggle, add, delete, or edit todos."
-  mut running = true
-  mut editing = false
-  mut editing_index = 0
-  mut draft = ""
-
-  while running {
-    selected = clamp_selection(selected, todos)
-    try draw(app, todos, selected, message, editing, editing_index, draft)
-    let key = try app.read_key()
-
-    if editing {
-      if key == "select" {
-        todos = save_edit(todos, editing_index, draft)
-        selected = clamp_selection(editing_index, todos)
-        editing = false
-        message = "Saved todo."
-      } else if key == "q" {
-        editing = false
-        if editing_index >= 0 and editing_index < todos.size() {
-          if todos.at(editing_index).title.is_empty() {
-            todos = delete_at(todos, editing_index)
-            selected = clamp_selection(editing_index, todos)
-          }
-        }
-        message = "Canceled edit."
-      } else if key == "backspace" {
-        draft = app.text_backspace(draft)
-        message = "Editing todo title."
-      } else if key == "space" {
-        draft = draft + " "
-        message = "Editing todo title."
-      } else if editable_key(key) {
-        draft = draft + key
-        message = "Editing todo title."
-      } else if key == "redraw" {
-        // just redraw
-      }
-    } else {
-      if key == "q" {
-        running = false
-      } else if key == "up" {
-        selected = selected - 1
-        selected = clamp_selection(selected, todos)
-        message = "Moved up."
-      } else if key == "down" {
-        selected = selected + 1
-        selected = clamp_selection(selected, todos)
-        message = "Moved down."
-      } else if key == "select" {
-        if todos.size() == 0 {
-          message = "No todos to toggle. Press a to add one."
-        } else {
-          let todo = todos.at(selected)
-          todos.set(selected, Todo{ title: todo.title, done: not todo.done })
-          message = "Toggled: " + todo_title(todo)
-        }
-      } else if key == "e" {
-        if todos.size() == 0 {
-          message = "No todos to edit. Press a to add one."
-        } else {
-          editing = true
-          editing_index = selected
-          draft = todos.at(selected).title
-          message = "Editing todo title."
-        }
-      } else if key == "a" {
-        todos.push(Todo{ title: "", done: false })
-        selected = todos.size() - 1
-        editing = true
-        editing_index = selected
-        draft = ""
-        message = "Type a title for the new todo."
-      } else if key == "d" {
-        if todos.size() == 0 {
-          message = "No todos to delete."
-        } else {
-          let todo = todos.at(selected)
-          todos = delete_at(todos, selected)
-          selected = clamp_selection(selected, todos)
-          message = "Deleted: " + todo_title(todo)
-        }
-      } else if key == "r" {
-        todos = initial_todos()
-        selected = 0
-        message = "Reset todos."
-      } else if key == "redraw" {
-        // just redraw
-      } else {
-        message = "Unknown key: " + key
-      }
+      children.push(ui::padding(1, todo_row(todo, index, selected)))
     }
   }
 
-  Result::ok(())
+  let done = done_count(todos)
+  children.push(ui::divider())
+  children.push(ui::padding(1, ui::text("Done: " + done.to_str() + " / " + todos.size().to_str())))
+  children.push(ui::padding(1, ui::text("j/k: move  enter: toggle  q: quit")))
+
+  children
+}
+
+// ─── Root widget ──────────────────────────────────────────────────────
+
+fn root_widget() ui::Widget {
+  ui::stateful(
+    key: "todo-app",
+    init: fn(ctx: ui::BuildContext) TodoUiState {
+      TodoUiState{ todos: initial_todos(), selected: 0 }
+    },
+    build: fn(ctx: ui::BuildContext, state: ui::State<TodoUiState>) ui::Widget {
+      let model = state.value()
+
+      let move_up = fn(mut s: TodoUiState) {
+        s.selected = clamp(s.selected - 1, s.todos.size())
+      }
+      let move_down = fn(mut s: TodoUiState) {
+        s.selected = clamp(s.selected + 1, s.todos.size())
+      }
+      let toggle = fn(mut s: TodoUiState) {
+        if s.todos.size() > 0 {
+          let todo = s.todos.at(s.selected)
+          s.todos.set(s.selected, Todo{ title: todo.title, done: not todo.done })
+        }
+      }
+
+      let children = build_children(model.todos, model.selected)
+
+      ui::shortcuts(
+        ui::actions(
+          ui::focus(ui::center(ui::column(children))),
+          [
+            ui::action("quit", fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+              ui::quit(ctx)
+              ui::EventResult::handled
+            }),
+            ui::action("up", fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+              state.set(move_up)
+              ui::EventResult::handled
+            }),
+            ui::action("down", fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+              state.set(move_down)
+              ui::EventResult::handled
+            }),
+            ui::action("toggle", fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+              state.set(toggle)
+              ui::EventResult::handled
+            }),
+          ],
+        ),
+        [
+          "q": "quit",
+          "j": "down",
+          "k": "up",
+          "Down": "down",
+          "Up": "up",
+          "Enter": "toggle",
+          "space": "toggle",
+        ],
+      )
+    },
+  )
 }
 
 fn main() Void {
-  mut app = vaxis::app_open("Todo").expect("open terminal")
-  run_todo(app).expect("run todo")
-  app.close().expect("close terminal")
+  ui::run(root_widget()).expect("run todo")
 }

@@ -1,0 +1,165 @@
+// ─── vaxis/ui bindings ────────────────────────────────────────────────
+// Thin Ard wrappers for git.sr.ht/~rockorager/vaxis/ui.
+//
+// Each widget constructor delegates to a Go FFI function in ffi/ui.go.
+// Closures are wrapped so Ard callbacks receive typed structs instead of
+// raw handles.
+
+// ── Opaque handles ────────────────────────────────────────────────────
+
+extern type Widget = "ui.Widget"
+extern type BuildContextHandle = "ui.BuildContext"
+extern type EventContextHandle = "ui.EventContext"
+extern type StateHandle = "*ffi.UiStateContext"
+
+// ── Event result ──────────────────────────────────────────────────────
+
+enum EventResult {
+  ignored,
+  handled,
+}
+
+// ── Action binding (raw FFI) ──────────────────────────────────────────
+
+extern type ActionBinding = "ffi.UiActionBinding"
+
+extern fn _action_binding(name: Str, handler: fn(EventContextHandle, Str) Int) ActionBinding   = "NewUiActionBinding"
+
+// ── Lifecycle ─────────────────────────────────────────────────────────
+
+extern fn _run(root: Widget) Void!Str   = "UiRun"
+
+fn run(root: Widget) Void!Str {
+  _run(root)
+}
+
+// ── Event helpers ─────────────────────────────────────────────────────
+
+extern fn _quit(ctx: EventContextHandle) Void   = "UiQuit"
+
+struct EventContext {
+  handle: EventContextHandle,
+}
+
+fn quit(ctx: EventContext) {
+  _quit(ctx.handle)
+}
+
+// ── Layout widgets ────────────────────────────────────────────────────
+
+extern fn _row(children: [Widget]) Widget   = "UiRow"
+extern fn _column(children: [Widget]) Widget   = "UiColumn"
+extern fn _center(child: Widget) Widget   = "UiCenter"
+extern fn _padding(all: Int, child: Widget) Widget   = "UiPadding"
+extern fn _expanded(child: Widget) Widget   = "UiExpanded"
+extern fn _sized_box(width: Int, height: Int, child: Widget) Widget   = "UiSizedBox"
+
+fn row(children: [Widget]) Widget { _row(children) }
+fn column(children: [Widget]) Widget { _column(children) }
+fn center(child: Widget) Widget { _center(child) }
+fn padding(all: Int, child: Widget) Widget { _padding(all, child) }
+fn expanded(child: Widget) Widget { _expanded(child) }
+fn sized_box(width: Int, height: Int, child: Widget) Widget { _sized_box(width, height, child) }
+
+// ── Basic widgets ─────────────────────────────────────────────────────
+
+extern fn _text(value: Str) Widget   = "UiText"
+extern fn _button(label: Str, on_pressed: fn(EventContextHandle)) Widget   = "UiButton"
+
+fn text(value: Str) Widget { _text(value) }
+
+fn button(label: Str, on_pressed: fn(EventContext)) Widget {
+  _button(
+    label,
+    fn(ctx: EventContextHandle) { on_pressed(EventContext{handle: ctx}) },
+  )
+}
+
+// ── Divider ───────────────────────────────────────────────────────────
+
+extern fn _divider() Widget   = "UiDivider"
+
+fn divider() Widget { _divider() }
+
+// ── Actions ───────────────────────────────────────────────────────────
+
+extern fn _actions(child: Widget, bindings: [ActionBinding]) Widget   = "UiActions"
+extern fn _shortcuts(child: Widget, bindings: [Str:Str]) Widget   = "UiShortcuts"
+
+fn action(name: Str, handler: fn(EventContext, Str) EventResult) ActionBinding {
+  _action_binding(
+    name,
+    fn(ctx: EventContextHandle, intent: Str) Int {
+      match handler(EventContext{handle: ctx}, intent) {
+        EventResult::handled => 1,
+        EventResult::ignored => 0,
+      }
+    },
+  )
+}
+
+fn actions(child: Widget, bindings: [ActionBinding]) Widget {
+  _actions(child, bindings)
+}
+
+fn shortcuts(child: Widget, bindings: [Str:Str]) Widget {
+  _shortcuts(child, bindings)
+}
+
+// ── Focus ─────────────────────────────────────────────────────────────
+
+extern fn _focus(child: Widget) Widget   = "UiFocus"
+extern fn _focus_scope(child: Widget, trap: Bool, auto_focus: Bool) Widget   = "UiFocusScope"
+
+fn focus(child: Widget) Widget { _focus(child) }
+
+fn focus_scope(child: Widget, trap: Bool, auto_focus: Bool) Widget {
+  _focus_scope(child, trap, auto_focus)
+}
+
+// ── Stateful widget ───────────────────────────────────────────────────
+
+extern fn _stateful<$T>(
+  key: Str,
+  init: fn(BuildContextHandle, StateHandle) $T,
+  build: fn(BuildContextHandle, StateHandle) Widget,
+) Widget   = "UiStateful"
+
+extern fn _state_value<$T>(ctx: StateHandle) $T   = "UiStateValue"
+extern fn _state_set_value<$T>(ctx: StateHandle, value: $T) Void   = "UiStateSetValue"
+
+struct BuildContext {
+  handle: BuildContextHandle,
+}
+
+struct State<$T> {
+  handle: StateHandle,
+}
+
+impl State {
+  fn value() $T {
+    _state_value<$T>(self.handle)
+  }
+
+  fn set(mutate: fn(mut $T)) {
+    mut next = self.value()
+    mutate(next)
+    _state_set_value(self.handle, next)
+  }
+}
+
+fn stateful<$T>(
+  key: Str,
+  init: fn(BuildContext) $T,
+  build: fn(BuildContext, State<$T>) Widget,
+) Widget {
+  _stateful(
+    key: key,
+    init: fn(build_ctx: BuildContextHandle, state_handle: StateHandle) $T {
+      init(BuildContext{handle: build_ctx})
+    },
+    build: fn(build_ctx: BuildContextHandle, state_handle: StateHandle) Widget {
+      build(BuildContext{handle: build_ctx}, State{handle: state_handle})
+    },
+  )
+}
