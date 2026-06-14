@@ -48,13 +48,17 @@ fn todo_row(todo: Todo, index: Int, selected: Int) ui::Widget {
   if is_sel { attrs = 1 }
   let arrow = ui::styled_text(selected_mark(index, selected), fg: -1, bg: -1, attrs: attrs)
   let title = ui::styled_text(todo.title, fg: -1, bg: -1, attrs: attrs)
-  ui::row([
-    arrow,
-    ui::text(" "),
-    ui::checkbox(checked: todo.done, label: "", disabled: true, on_changed: fn(ctx: ui::EventContext, next: Bool) {}),
-    ui::text(" "),
-    title,
-  ])
+  let spacer = ui::sized_box(width: 1, height: 1, child: ui::text(""))
+  ui::flex(
+    axis: ui::AXIS_HORIZONTAL,
+    children: [
+      arrow,
+      spacer,
+      ui::checkbox(checked: todo.done, label: "", disabled: true, on_changed: fn(ctx: ui::EventContext, next: Bool) {}),
+      spacer,
+      title,
+    ],
+  )
 }
 
 fn build_list(model: TodoUiState) [ui::Widget] {
