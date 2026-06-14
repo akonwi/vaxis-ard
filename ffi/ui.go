@@ -192,6 +192,42 @@ func UiTextArea(value, placeholder string, minWidth, minHeight int, softWrap boo
 	}
 }
 
+// ─── DecoratedBox ─────────────────────────────────────────────────────
+
+func UiDecoratedBox(fg, bg, ulColor, ulStyle, attrs int, borderTop, borderRight, borderBottom, borderLeft bool, child ui.Widget) ui.Widget {
+	return ui.DecoratedBox(
+		ui.Decoration{
+			Style:  decodeUiStyle(fg, bg, ulColor, ulStyle, attrs),
+			Border: ui.Border{Top: borderTop, Right: borderRight, Bottom: borderBottom, Left: borderLeft, Style: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs)},
+		},
+		child,
+	)
+}
+
+func UiAlign(child ui.Widget, x, y int) ui.Widget {
+	return ui.Align{Child: child, Alignment: ui.Alignment{X: x, Y: y}}
+}
+
+func UiConstrainedBox(minW, maxW, minH, maxH int, child ui.Widget) ui.Widget {
+	return ui.ConstrainedBox{Child: child, Constraints: ui.Constraints{MinWidth: minW, MaxWidth: maxW, MinHeight: minH, MaxHeight: maxH}}
+}
+
+func UiStack(children []ui.Widget, x, y int) ui.Widget {
+	return ui.Stack{Children: children, Alignment: ui.Alignment{X: x, Y: y}}
+}
+
+func UiDialog(title string, child ui.Widget, actions []ui.Widget, width int, onDismiss func(ui.EventContext)) ui.Widget {
+	return ui.Dialog{Title: title, Child: child, Actions: actions, Width: width, OnDismiss: onDismiss}
+}
+
+func UiModalBarrier(fg, bg, ulColor, ulStyle, attrs int, opacity int) ui.Widget {
+	return ui.ModalBarrier{Color: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs).Background, Opacity: uint8(opacity)}
+}
+
+func UiListTile(title ui.Widget, selected bool, disabled bool, onPressed func(ui.EventContext)) ui.Widget {
+	return ui.ListTile{Title: title, Selected: selected, Disabled: disabled, OnPressed: onPressed}
+}
+
 // ─── Scroll ───────────────────────────────────────────────────────────
 
 func UiScrollView(child ui.Widget) ui.Widget {

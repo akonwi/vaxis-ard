@@ -61,6 +61,77 @@ fn padding(all: Int, child: Widget) Widget { _padding(all, child) }
 fn expanded(child: Widget) Widget { _expanded(child) }
 fn sized_box(width: Int, height: Int, child: Widget) Widget { _sized_box(width, height, child) }
 
+// ── DecoratedBox ──────────────────────────────────────────────────────
+
+extern fn _decorated_box(
+  fg: Int, bg: Int, ul_color: Int, ul_style: Int, attrs: Int,
+  border_top: Bool, border_right: Bool, border_bottom: Bool, border_left: Bool,
+  child: Widget,
+) Widget = "UiDecoratedBox"
+
+fn decorated_box(fg: Int, bg: Int, attrs: Int, child: Widget) Widget {
+  _decorated_box(fg, bg, -1, 0, attrs, false, false, false, false, child)
+}
+
+fn bordered_box(fg: Int, bg: Int, attrs: Int, child: Widget) Widget {
+  _decorated_box(fg, bg, -1, 0, attrs, true, true, true, true, child)
+}
+
+// ── Align ─────────────────────────────────────────────────────────────
+
+extern fn _align(child: Widget, x: Int, y: Int) Widget = "UiAlign"
+
+fn align(child: Widget, x: Int, y: Int) Widget { _align(child, x, y) }
+
+// ── ConstrainedBox ────────────────────────────────────────────────────
+
+extern fn _constrained_box(min_w: Int, max_w: Int, min_h: Int, max_h: Int, child: Widget) Widget = "UiConstrainedBox"
+
+fn constrained_box(min_w: Int, max_w: Int, min_h: Int, max_h: Int, child: Widget) Widget {
+  _constrained_box(min_w, max_w, min_h, max_h, child)
+}
+
+// ── Stack ─────────────────────────────────────────────────────────────
+
+extern fn _stack(children: [Widget], x: Int, y: Int) Widget = "UiStack"
+
+fn stack(children: [Widget], x: Int, y: Int) Widget { _stack(children, x, y) }
+
+// ── Dialog ────────────────────────────────────────────────────────────
+
+extern fn _dialog(title: Str, child: Widget, actions: [Widget], width: Int, on_dismiss: fn(EventContextHandle)) Widget = "UiDialog"
+
+fn dialog(title: Str, child: Widget, actions: [Widget], width: Int, on_dismiss: fn(EventContext)) Widget {
+  _dialog(
+    title, child, actions, width,
+    fn(ctx: EventContextHandle) { on_dismiss(EventContext{handle: ctx}) },
+  )
+}
+
+// ── ModalBarrier ──────────────────────────────────────────────────────
+
+extern fn _modal_barrier(fg: Int, bg: Int, ul_color: Int, ul_style: Int, attrs: Int, opacity: Int) Widget = "UiModalBarrier"
+
+fn modal_barrier(bg: Int, opacity: Int) Widget {
+  _modal_barrier(-1, bg, -1, 0, 0, opacity)
+}
+
+// ── ListTile ──────────────────────────────────────────────────────────
+
+extern fn _list_tile(title: Widget, selected: Bool, disabled: Bool, on_pressed: fn(EventContextHandle)) Widget = "UiListTile"
+
+fn list_tile(title: Widget, selected: Bool, disabled: Bool?, on_pressed: fn(EventContext)) Widget {
+  mut d = false
+  match disabled {
+    v => { d = v },
+    _ => {},
+  }
+  _list_tile(
+    title, selected, d,
+    fn(ctx: EventContextHandle) { on_pressed(EventContext{handle: ctx}) },
+  )
+}
+
 // ── Basic widgets ─────────────────────────────────────────────────────
 
 extern fn _text(value: Str) Widget   = "UiText"
