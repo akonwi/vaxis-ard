@@ -201,6 +201,41 @@ fn selection_container(child: Widget, disabled: Bool?) Widget {
   _selection_container(child, d)
 }
 
+// ── CommandPalette ────────────────────────────────────────────────────
+
+extern type CmdItem = "ffi.UiCommandPaletteItem"
+
+extern fn _command_palette(
+  items: [CmdItem],
+  placeholder: Str,
+  empty_text: Str,
+  width: Int,
+  max_visible_rows: Int,
+  on_dismiss: fn(EventContextHandle),
+  on_selected: fn(EventContextHandle, Str),
+) Widget = "UiCommandPalette"
+extern fn _cmd_item(title: Str, description: Str, aliases: [Str]) CmdItem = "UiMakeCmdItem"
+
+fn cmd_item(title: Str, description: Str) CmdItem {
+  _cmd_item(title, description, [])
+}
+
+fn command_palette(
+  items: [CmdItem],
+  placeholder: Str,
+  empty_text: Str,
+  width: Int,
+  max_visible_rows: Int,
+  on_dismiss: fn(EventContext),
+  on_selected: fn(EventContext, Str),
+) Widget {
+  _command_palette(
+    items, placeholder, empty_text, width, max_visible_rows,
+    fn(ctx: EventContextHandle) { on_dismiss(EventContext{handle: ctx}) },
+    fn(ctx: EventContextHandle, title: Str) { on_selected(EventContext{handle: ctx}, title) },
+  )
+}
+
 // ── ProgressBar ───────────────────────────────────────────────────────
 
 extern fn _progress_bar(value: Float, width: Int, filled_fg: Int, filled_bg: Int, filled_attrs: Int, empty_fg: Int, empty_bg: Int, empty_attrs: Int) Widget = "UiProgressBar"

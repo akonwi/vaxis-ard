@@ -283,6 +283,38 @@ func UiSelectionContainer(child ui.Widget, disabled bool) ui.Widget {
 	return ui.SelectionContainer{Child: child, Disabled: disabled}
 }
 
+type UiCommandPaletteItem struct {
+	Title       string
+	Description string
+	Aliases     []string
+}
+
+func UiCommandPalette(items []UiCommandPaletteItem, placeholder string, emptyText string, width int, maxVisibleRows int, onDismiss func(ui.EventContext), onSelected func(ui.EventContext, string)) ui.Widget {
+	built := make([]ui.CommandPaletteItem, len(items))
+	for i, item := range items {
+		built[i] = ui.CommandPaletteItem{
+			Title:       item.Title,
+			Description: item.Description,
+			Aliases:     item.Aliases,
+		}
+	}
+	return ui.CommandPalette{
+		Items:          built,
+		Placeholder:    placeholder,
+		EmptyText:      emptyText,
+		Width:          width,
+		MaxVisibleRows: maxVisibleRows,
+		OnDismiss:      onDismiss,
+		OnSelected: func(ctx ui.EventContext, item ui.CommandPaletteItem) {
+			onSelected(ctx, item.Title)
+		},
+	}
+}
+
+func UiMakeCmdItem(title, description string, aliases []string) UiCommandPaletteItem {
+	return UiCommandPaletteItem{Title: title, Description: description, Aliases: aliases}
+}
+
 func UiModalBarrier(fg, bg, ulColor, ulStyle, attrs int, opacity int) ui.Widget {
 	return ui.ModalBarrier{Color: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs).Background, Opacity: uint8(opacity)}
 }
