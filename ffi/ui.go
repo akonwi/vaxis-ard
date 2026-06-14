@@ -348,6 +348,10 @@ func UiTableColumnFixed(width int) UiTableColumn  { return UiTableColumn{Kind: 1
 func UiTableColumnFlex(flex int) UiTableColumn    { return UiTableColumn{Kind: 2, Value: flex} }
 func UiTableRowNew(children []ui.Widget) UiTableRow { return UiTableRow{Children: children} }
 
+func UiCursor(col, row, shape int, hidden bool, child ui.Widget) ui.Widget {
+	return ui.Cursor{Col: col, Row: row, Shape: ui.CursorStyle(shape), Hidden: hidden, Child: child}
+}
+
 func UiModalBarrier(fg, bg, ulColor, ulStyle, attrs int, opacity int) ui.Widget {
 	return ui.ModalBarrier{Color: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs).Background, Opacity: uint8(opacity)}
 }

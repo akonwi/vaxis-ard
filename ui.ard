@@ -256,6 +256,22 @@ fn table(columns: [TableColumn], column_gap: Int, row_gap: Int, rows: [TableRow]
   _table(columns, column_gap, row_gap, rows)
 }
 
+// ── Cursor ────────────────────────────────────────────────────────────
+
+extern fn _cursor(col: Int, row: Int, shape: Int, hidden: Bool, child: Widget) Widget = "UiCursor"
+
+let CURSOR_DEFAULT = 0
+let CURSOR_BLOCK_BLINKING = 1
+let CURSOR_BLOCK = 2
+let CURSOR_UNDERLINE_BLINKING = 3
+let CURSOR_UNDERLINE = 4
+let CURSOR_BEAM_BLINKING = 5
+let CURSOR_BEAM = 6
+
+fn cursor(col: Int, row: Int, shape: Int, hidden: Bool, child: Widget) Widget {
+  _cursor(col, row, shape, hidden, child)
+}
+
 // ── ProgressBar ───────────────────────────────────────────────────────
 
 extern fn _progress_bar(value: Float, width: Int, filled_fg: Int, filled_bg: Int, filled_attrs: Int, empty_fg: Int, empty_bg: Int, empty_attrs: Int) Widget = "UiProgressBar"
