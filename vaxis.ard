@@ -11,6 +11,8 @@ extern type RawVaxis = "*vaxis.Vaxis"
 
 extern fn raw_open(title: Str) RawVaxis!Str = "Open"
 
+extern fn raw_open_with(title: Str, opts: Int) RawVaxis!Str = "OpenWith"
+
 extern fn raw_close(vx: RawVaxis) Void!Str = "Close"
 
 extern fn raw_suspend(vx: RawVaxis) Void!Str = "Suspend"
@@ -114,6 +116,75 @@ extern fn raw_terminal_id(vx: RawVaxis) Str = "TerminalID"
 
 extern fn raw_text_backspace(text: Str) Str = "TextBackspace"
 
+// ── Style at position
+
+extern fn raw_set_style(
+  vx: RawVaxis,
+  col: Int,
+  row: Int,
+  fg: Int,
+  bg: Int,
+  ul_color: Int,
+  ul_style: Int,
+  attrs: Int,
+) Void = "SetStyle"
+
+// ── Window text (Go handles grapheme segmentation + wrapping)
+
+extern fn raw_print(
+  vx: RawVaxis,
+  col: Int,
+  row: Int,
+  width: Int,
+  height: Int,
+  texts: [Str],
+  fgs: [Int],
+  bgs: [Int],
+  ul_colors: [Int],
+  ul_styles: [Int],
+  attrss: [Int],
+) Int = "Print"
+
+extern fn raw_println(
+  vx: RawVaxis,
+  col: Int,
+  row: Int,
+  width: Int,
+  texts: [Str],
+  fgs: [Int],
+  bgs: [Int],
+  ul_colors: [Int],
+  ul_styles: [Int],
+  attrss: [Int],
+) Void = "Println"
+
+extern fn raw_print_truncate(
+  vx: RawVaxis,
+  col: Int,
+  row: Int,
+  width: Int,
+  texts: [Str],
+  fgs: [Int],
+  bgs: [Int],
+  ul_colors: [Int],
+  ul_styles: [Int],
+  attrss: [Int],
+) Void = "PrintTruncate"
+
+extern fn raw_wrap(
+  vx: RawVaxis,
+  col: Int,
+  row: Int,
+  width: Int,
+  height: Int,
+  texts: [Str],
+  fgs: [Int],
+  bgs: [Int],
+  ul_colors: [Int],
+  ul_styles: [Int],
+  attrss: [Int],
+) Int = "Wrap"
+
 // ─── Pure Ard Types ────────────────────────────────────────────────────
 
 // ── Color (type union) ─────────────────────────────────────────────────
@@ -204,7 +275,26 @@ let KEY_QUIT = "q"
 
 struct KeyEvent {
   key: Str,
+  modifiers: Int,
+  event_type: Int,
 }
+
+// Modifier bitmask (matching vaxis Go ModifierMask)
+let MOD_SHIFT = 1
+let MOD_ALT = 2
+let MOD_CTRL = 4
+let MOD_SUPER = 8
+let MOD_HYPER = 16
+let MOD_META = 32
+let MOD_CAPS_LOCK = 64
+let MOD_NUM_LOCK = 128
+
+// EventType (matching vaxis Go EventType)
+let EVENT_PRESS = 0
+let EVENT_REPEAT = 1
+let EVENT_RELEASE = 2
+let EVENT_MOTION = 3
+let EVENT_PASTE = 4
 
 struct ResizeEvent {
   cols: Int,
@@ -263,7 +353,7 @@ fn style_ul_style(ul: UnderlineStyle) Int {
 }
 
 fn parse_event(raw: Str) Event {
-  mut event: Event = KeyEvent{ key: raw }
+  mut event: Event = KeyEvent{ key: raw, modifiers: 0, event_type: 0 }
   if raw == "redraw" { event = RedrawEvent{} }
   if raw == "quit" { event = QuitEvent{} }
   if raw == "focus:in" { event = FocusInEvent{} }
@@ -273,8 +363,19 @@ fn parse_event(raw: Str) Event {
   if raw == "theme:dark" { event = ColorThemeEvent{ dark: true } }
   if raw == "theme:light" { event = ColorThemeEvent{ dark: false } }
   if raw.starts_with("key:") {
-    let key = raw.replace("key:", "")
-    event = KeyEvent{ key: key }
+    let rest = raw.replace("key:", "")
+    let parts = rest.split(":")
+    // Format: key:<modmask>:<eventtype>:<name>
+    // Backward compat: key:<name>
+    mut mods = 0
+    mut etype = 0
+    mut name = rest
+    if parts.size() >= 3 {
+      mods = Int::from_str(parts.at(0)).or(0)
+      etype = Int::from_str(parts.at(1)).or(0)
+      name = parts.at(2)
+    }
+    event = KeyEvent{ key: name, modifiers: mods, event_type: etype }
   }
   if raw.starts_with("resize:") {
     let split = raw.split(":")
@@ -446,6 +547,21 @@ fn cell_styled(grapheme: Str, style: Style) Cell {
   }
 }
 
+// ── Segment (text + style pair) ────────────────────────────────────
+
+struct Segment {
+  text: Str,
+  style: Style,
+}
+
+fn seg(text: Str, style: Style) Segment {
+  Segment{ text: text, style: style }
+}
+
+fn plain_seg(text: Str) Segment {
+  Segment{ text: text, style: default_style() }
+}
+
 // ─── Window ────────────────────────────────────────────────────────────
 
 struct Window {
@@ -552,6 +668,130 @@ impl Window {
       style_attrs(style),
     )
   }
+
+  fn origin_col() Int { self.col_offset }
+
+  fn origin_row() Int { self.row_offset }
+
+  fn mut set_style(col: Int, row: Int, style: Style) {
+    let in_bounds = col >= 0 and col < self.width and row >= 0 and row < self.height
+    if in_bounds {
+      raw_set_style(
+        self.vx,
+        self.col_offset + col,
+        self.row_offset + row,
+        color_to_int(style.fg),
+        color_to_int(style.bg),
+        color_to_int(style.ul_color),
+        style_ul_style(style.ul_style),
+        style_attrs(style),
+      )
+    }
+  }
+
+  fn mut print(col: Int, row: Int, segs: [Segment]) Int {
+    mut texts: [Str] = []
+    mut fgs: [Int] = []
+    mut bgs: [Int] = []
+    mut uls: [Int] = []
+    mut ul_styles: [Int] = []
+    mut attrss: [Int] = []
+    for seg in segs {
+      let s = seg.style
+      texts.push(seg.text)
+      fgs.push(color_to_int(s.fg))
+      bgs.push(color_to_int(s.bg))
+      uls.push(color_to_int(s.ul_color))
+      ul_styles.push(style_ul_style(s.ul_style))
+      attrss.push(style_attrs(s))
+    }
+    let pos = raw_print(
+      self.vx,
+      self.col_offset + col,
+      self.row_offset + row,
+      self.width - col,
+      self.height - row,
+      texts, fgs, bgs, uls, ul_styles, attrss,
+    )
+    pos % 10000 - self.col_offset
+  }
+
+  fn mut println(row: Int, col: Int, segs: [Segment]) {
+    mut texts: [Str] = []
+    mut fgs: [Int] = []
+    mut bgs: [Int] = []
+    mut uls: [Int] = []
+    mut ul_styles: [Int] = []
+    mut attrss: [Int] = []
+    for seg in segs {
+      let s = seg.style
+      texts.push(seg.text)
+      fgs.push(color_to_int(s.fg))
+      bgs.push(color_to_int(s.bg))
+      uls.push(color_to_int(s.ul_color))
+      ul_styles.push(style_ul_style(s.ul_style))
+      attrss.push(style_attrs(s))
+    }
+    raw_println(
+      self.vx,
+      self.col_offset + col,
+      self.row_offset + row,
+      self.width - col,
+      texts, fgs, bgs, uls, ul_styles, attrss,
+    )
+  }
+
+  fn mut print_truncate(row: Int, col: Int, segs: [Segment]) {
+    mut texts: [Str] = []
+    mut fgs: [Int] = []
+    mut bgs: [Int] = []
+    mut uls: [Int] = []
+    mut ul_styles: [Int] = []
+    mut attrss: [Int] = []
+    for seg in segs {
+      let s = seg.style
+      texts.push(seg.text)
+      fgs.push(color_to_int(s.fg))
+      bgs.push(color_to_int(s.bg))
+      uls.push(color_to_int(s.ul_color))
+      ul_styles.push(style_ul_style(s.ul_style))
+      attrss.push(style_attrs(s))
+    }
+    raw_print_truncate(
+      self.vx,
+      self.col_offset + col,
+      self.row_offset + row,
+      self.width - col,
+      texts, fgs, bgs, uls, ul_styles, attrss,
+    )
+  }
+
+  fn mut wrap(col: Int, row: Int, segs: [Segment]) Int {
+    mut texts: [Str] = []
+    mut fgs: [Int] = []
+    mut bgs: [Int] = []
+    mut uls: [Int] = []
+    mut ul_styles: [Int] = []
+    mut attrss: [Int] = []
+    for seg in segs {
+      let s = seg.style
+      texts.push(seg.text)
+      fgs.push(color_to_int(s.fg))
+      bgs.push(color_to_int(s.bg))
+      uls.push(color_to_int(s.ul_color))
+      ul_styles.push(style_ul_style(s.ul_style))
+      attrss.push(style_attrs(s))
+    }
+    let pos = raw_wrap(
+      self.vx,
+      self.col_offset + col,
+      self.row_offset + row,
+      self.width - col,
+      self.height - row,
+      texts, fgs, bgs, uls, ul_styles, attrss,
+    )
+    pos % 10000 - self.col_offset
+  }
 }
 
 // ─── App ───────────────────────────────────────────────────────────────
@@ -562,11 +802,39 @@ struct App {
   height: Int,
 }
 
-fn app_open(title: Str) App!Str {
-  let vx = try raw_open(title)
-  let w = raw_width(vx)
-  let h = raw_height(vx)
-  Result::ok(App{ vx: vx, width: w, height: h })
+// ── Options ──────────────────────────────────────────────────────────
+
+struct Options {
+  disable_kitty_keyboard: Bool?,
+  disable_mouse: Bool?,
+  no_signals: Bool?,
+  csiu_bit_mask: Int?,
+  enable_sgr_pixels: Bool?,
+}
+
+fn default_options() Options {
+  Options{
+    disable_kitty_keyboard: true,
+    disable_mouse: false,
+    no_signals: false,
+    csiu_bit_mask: 1,
+    enable_sgr_pixels: false,
+  }
+}
+
+fn pack_options(opts: Options) Int {
+  mut v = 0
+  if opts.disable_kitty_keyboard.or(false) { v = v + 1 }
+  if opts.disable_mouse.or(false) { v = v + 2 }
+  if opts.no_signals.or(false) { v = v + 4 }
+  if opts.enable_sgr_pixels.or(false) { v = v + 8 }
+  v + (opts.csiu_bit_mask.or(0) * 16)
+}
+
+fn app_open(title: Str, opts: Options?) App!Str {
+  let opts = opts.or(default_options())
+  let vx = try raw_open_with(title, pack_options(opts))
+  Result::ok(App{ vx: vx, width: raw_width(vx), height: raw_height(vx) })
 }
 
 impl App {
@@ -601,7 +869,15 @@ impl App {
   fn mut read_key() Str!Str {
     let raw = try raw_read_key(self.vx)
     mut key = "redraw"
-    if raw.starts_with("key:") { key = raw.replace("key:", "") }
+    if raw.starts_with("key:") {
+      let rest = raw.replace("key:", "")
+      let parts = rest.split(":")
+      if parts.size() >= 3 {
+        key = parts.at(2)
+      } else {
+        key = rest
+      }
+    }
     if raw == "quit" { key = "q" }
     Result::ok(key)
   }

@@ -12,7 +12,20 @@ import (
 // ─── Lifecycle ────────────────────────────────────────────────────────────
 
 func Open(title string) (*vaxis.Vaxis, error) {
-	vx, err := vaxis.New(vaxis.Options{DisableKittyKeyboard: true})
+	return OpenWith(title, 1) // default: disableKittyKeyboard=true
+}
+
+// OpenWith creates a vaxis instance with bitpacked options.
+// opts bits: 0=disableKittyKeyboard 1=disableMouse 2=noSignals
+// 3=enableSGRPixels 4-7=csiuBitMask
+func OpenWith(title string, opts int) (*vaxis.Vaxis, error) {
+	vx, err := vaxis.New(vaxis.Options{
+		DisableKittyKeyboard: opts&1 != 0,
+		DisableMouse:         opts&2 != 0,
+		NoSignals:            opts&4 != 0,
+		EnableSGRPixels:      opts&8 != 0,
+		CSIuBitMask:          vaxis.CSIuBitMask((opts >> 4) & 0xF),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +198,99 @@ func HideCursor(vx *vaxis.Vaxis) {
 	}
 }
 
+// Print prints segments with wrapping, returning encoded (col + row*10000).
+func Print(
+	vx *vaxis.Vaxis,
+	col, row, width, height int,
+	texts []string,
+	fgs, bgs, ulColors, ulStyles, attrss []int,
+) int {
+	if vx == nil {
+		return 0
+	}
+	segs := buildSegments(texts, fgs, bgs, ulColors, ulStyles, attrss)
+	win := vx.Window().New(col, row, width, height)
+	c, r := win.Print(segs...)
+	return c + r*10000
+}
+
+// Println prints a single line, truncating if wider than the window.
+func Println(
+	vx *vaxis.Vaxis,
+	col, row, width int,
+	texts []string,
+	fgs, bgs, ulColors, ulStyles, attrss []int,
+) {
+	if vx == nil {
+		return
+	}
+	segs := buildSegments(texts, fgs, bgs, ulColors, ulStyles, attrss)
+	win := vx.Window().New(col, row, width, 1)
+	win.Println(row, segs...)
+}
+
+// PrintTruncate prints a single line with ... truncation.
+func PrintTruncate(
+	vx *vaxis.Vaxis,
+	col, row, width int,
+	texts []string,
+	fgs, bgs, ulColors, ulStyles, attrss []int,
+) {
+	if vx == nil {
+		return
+	}
+	segs := buildSegments(texts, fgs, bgs, ulColors, ulStyles, attrss)
+	win := vx.Window().New(col, row, width, 1)
+	win.PrintTruncate(row, segs...)
+}
+
+// Wrap uses unicode line-break logic, returning encoded (col + row*10000).
+func Wrap(
+	vx *vaxis.Vaxis,
+	col, row, width, height int,
+	texts []string,
+	fgs, bgs, ulColors, ulStyles, attrss []int,
+) int {
+	if vx == nil {
+		return 0
+	}
+	segs := buildSegments(texts, fgs, bgs, ulColors, ulStyles, attrss)
+	win := vx.Window().New(col, row, width, height)
+	c, r := win.Wrap(segs...)
+	return c + r*10000
+}
+
+func buildSegments(
+	texts []string,
+	fgs, bgs, ulColors, ulStyles, attrss []int,
+) []vaxis.Segment {
+	n := len(texts)
+	if len(fgs) < n {
+		n = len(fgs)
+	}
+	segs := make([]vaxis.Segment, n)
+	for i := 0; i < n; i++ {
+		segs[i] = vaxis.Segment{
+			Text:  texts[i],
+			Style: decodeStyle(fgs[i], bgs[i], ulColors[i], ulStyles[i], attrss[i]),
+		}
+	}
+	return segs
+}
+
+// SetStyle changes the style at a position without modifying its text.
+func SetStyle(
+	vx *vaxis.Vaxis,
+	col, row int,
+	fg, bg, ulColor, ulStyle, attrs int,
+) {
+	if vx == nil {
+		return
+	}
+	style := decodeStyle(fg, bg, ulColor, ulStyle, attrs)
+	vx.Window().SetStyle(col, row, style)
+}
+
 // ─── Events ───────────────────────────────────────────────────────────────
 
 // ReadEvent reads the next event from vaxis and encodes it as a string:
@@ -203,28 +309,30 @@ func ReadEvent(vx *vaxis.Vaxis) (string, error) {
 	for ev := range vx.Events() {
 		switch ev := ev.(type) {
 		case vaxis.Key:
-			if ev.EventType != vaxis.EventPress {
-				continue
-			}
+			var normalized string
 			if key := appKeyFromVaxisKey(ev); key != "" {
-				return "key:" + key, nil
+				normalized = key
+			} else {
+				switch ev.String() {
+				case "Ctrl+c", "Esc":
+					return "quit", nil
+				case "Up":
+					normalized = "up"
+				case "Down":
+					normalized = "down"
+				case "Left":
+					normalized = "left"
+				case "Right":
+					normalized = "right"
+				case "Enter", "Space":
+					normalized = "select"
+				case "BackSpace":
+					normalized = "backspace"
+				default:
+					continue
+				}
 			}
-			switch ev.String() {
-			case "Ctrl+c", "Esc":
-				return "quit", nil
-			case "Up":
-				return "key:up", nil
-			case "Down":
-				return "key:down", nil
-			case "Left":
-				return "key:left", nil
-			case "Right":
-				return "key:right", nil
-			case "Enter", "Space":
-				return "key:select", nil
-			case "BackSpace":
-				return "key:backspace", nil
-			}
+			return fmt.Sprintf("key:%d:%d:%s", int(ev.Modifiers), int(ev.EventType), normalized), nil
 		case vaxis.Resize:
 			return fmt.Sprintf("resize:%d:%d", ev.Cols, ev.Rows), nil
 		case vaxis.Redraw:
