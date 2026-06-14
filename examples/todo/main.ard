@@ -46,10 +46,12 @@ fn todo_row(todo: Todo, index: Int, selected: Int) ui::Widget {
   let is_sel = index == selected
   mut attrs = 0
   if is_sel { attrs = 1 }
-  let mark_text = ui::styled_text(selected_mark(index, selected), fg: -1, bg: -1, attrs: attrs)
+  let arrow = ui::styled_text(selected_mark(index, selected), fg: -1, bg: -1, attrs: attrs)
+  let title = ui::styled_text(todo.title, fg: -1, bg: -1, attrs: attrs)
   ui::row([
-    mark_text,
-    ui::checkbox(checked: todo.done, label: todo.title, disabled: true, on_changed: fn(ctx: ui::EventContext, next: Bool) {}),
+    arrow,
+    ui::checkbox(checked: todo.done, label: "", disabled: true, on_changed: fn(ctx: ui::EventContext, next: Bool) {}),
+    title,
   ])
 }
 
