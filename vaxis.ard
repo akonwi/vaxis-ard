@@ -11,29 +11,29 @@ extern type RawImage = "vaxis.Image"
 
 // ── Lifecycle
 
-extern fn _raw_open(title: Str) RawVaxis!Str = "Open"
+private extern fn raw_open(title: Str) RawVaxis!Str = "Open"
 
-extern fn _raw_open_with(title: Str, opts: Int) RawVaxis!Str = "OpenWith"
+private extern fn raw_open_with(title: Str, opts: Int) RawVaxis!Str = "OpenWith"
 
-extern fn _raw_close(vx: RawVaxis) Void!Str = "Close"
+private extern fn raw_close(vx: RawVaxis) Void!Str = "Close"
 
-extern fn _raw_suspend(vx: RawVaxis) Void!Str = "Suspend"
+private extern fn raw_suspend(vx: RawVaxis) Void!Str = "Suspend"
 
-extern fn _raw_resume(vx: RawVaxis) Void!Str = "Resume"
+private extern fn raw_resume(vx: RawVaxis) Void!Str = "Resume"
 
 // ── Render
 
-extern fn _raw_render(vx: RawVaxis) Void!Str = "Render"
+private extern fn raw_render(vx: RawVaxis) Void!Str = "Render"
 
-extern fn _raw_refresh(vx: RawVaxis) Void = "Refresh"
+private extern fn raw_refresh(vx: RawVaxis) Void = "Refresh"
 
-extern fn _raw_width(vx: RawVaxis) Int = "Width"
+private extern fn raw_width(vx: RawVaxis) Int = "Width"
 
-extern fn _raw_height(vx: RawVaxis) Int = "Height"
+private extern fn raw_height(vx: RawVaxis) Int = "Height"
 
 // ── Cell buffer (Go-owned screen buffer)
 
-extern fn _raw_set_cell(
+private extern fn raw_set_cell(
   vx: RawVaxis,
   col: Int,
   row: Int,
@@ -46,7 +46,7 @@ extern fn _raw_set_cell(
   attrs: Int,
 ) Void = "SetCell"
 
-extern fn _raw_clear_region(
+private extern fn raw_clear_region(
   vx: RawVaxis,
   col: Int,
   row: Int,
@@ -54,7 +54,7 @@ extern fn _raw_clear_region(
   height: Int,
 ) Void = "Clear"
 
-extern fn _raw_write(
+private extern fn raw_write(
   vx: RawVaxis,
   col: Int,
   row: Int,
@@ -66,7 +66,7 @@ extern fn _raw_write(
   attrs: Int,
 ) Void = "Write"
 
-extern fn _raw_fill_region(
+private extern fn raw_fill_region(
   vx: RawVaxis,
   col: Int,
   row: Int,
@@ -82,75 +82,75 @@ extern fn _raw_fill_region(
 
 // ── Cursor
 
-extern fn _raw_show_cursor(vx: RawVaxis, col: Int, row: Int) Void = "ShowCursor"
+private extern fn raw_show_cursor(vx: RawVaxis, col: Int, row: Int) Void = "ShowCursor"
 
-extern fn _raw_show_cursor_styled(vx: RawVaxis, col: Int, row: Int, style: Int) Void = "ShowCursorStyled"
+private extern fn raw_show_cursor_styled(vx: RawVaxis, col: Int, row: Int, style: Int) Void = "ShowCursorStyled"
 
-extern fn _raw_hide_cursor(vx: RawVaxis) Void = "HideCursor"
+private extern fn raw_hide_cursor(vx: RawVaxis) Void = "HideCursor"
 
 // ── Events (Go multiplexes stdin + signals, normalizes to strings)
 
-extern fn _raw_read_key(vx: RawVaxis) Str!Str = "ReadEvent"
+private extern fn raw_read_key(vx: RawVaxis) Str!Str = "ReadEvent"
 
 // ── Capabilities
 
-extern fn _raw_can_rgb(vx: RawVaxis) Bool = "CanRGB"
+private extern fn raw_can_rgb(vx: RawVaxis) Bool = "CanRGB"
 
-extern fn _raw_can_sixel(vx: RawVaxis) Bool = "CanSixel"
+private extern fn raw_can_sixel(vx: RawVaxis) Bool = "CanSixel"
 
-extern fn _raw_can_kitty_graphics(vx: RawVaxis) Bool = "CanKittyGraphics"
+private extern fn raw_can_kitty_graphics(vx: RawVaxis) Bool = "CanKittyGraphics"
 
-extern fn _raw_can_unicode_core(vx: RawVaxis) Bool = "CanUnicodeCore"
+private extern fn raw_can_unicode_core(vx: RawVaxis) Bool = "CanUnicodeCore"
 
-extern fn _raw_can_display_graphics(vx: RawVaxis) Bool = "CanDisplayGraphics"
+private extern fn raw_can_display_graphics(vx: RawVaxis) Bool = "CanDisplayGraphics"
 
 // ── Terminal helpers
 
-extern fn _raw_bell(vx: RawVaxis) Void = "Bell"
+private extern fn raw_bell(vx: RawVaxis) Void = "Bell"
 
-extern fn _raw_set_title(vx: RawVaxis, title: Str) Void = "SetTitle"
+private extern fn raw_set_title(vx: RawVaxis, title: Str) Void = "SetTitle"
 
-extern fn _raw_notify(vx: RawVaxis, title: Str, body: Str) Void = "Notify"
+private extern fn raw_notify(vx: RawVaxis, title: Str, body: Str) Void = "Notify"
 
-extern fn _raw_clipboard_push(vx: RawVaxis, text: Str) Void = "ClipboardPush"
+private extern fn raw_clipboard_push(vx: RawVaxis, text: Str) Void = "ClipboardPush"
 
-extern fn _raw_rendered_width(vx: RawVaxis, text: Str) Int = "RenderedWidth"
+private extern fn raw_rendered_width(vx: RawVaxis, text: Str) Int = "RenderedWidth"
 
-extern fn _raw_terminal_id(vx: RawVaxis) Str = "TerminalID"
+private extern fn raw_terminal_id(vx: RawVaxis) Str = "TerminalID"
 
-extern fn _raw_text_backspace(text: Str) Str = "TextBackspace"
+private extern fn raw_text_backspace(text: Str) Str = "TextBackspace"
 
 // ── P1: Mouse, clipboard, queries
 
-extern fn _raw_set_mouse_shape(vx: RawVaxis, shape: Str) Void = "SetMouseShape"
+private extern fn raw_set_mouse_shape(vx: RawVaxis, shape: Str) Void = "SetMouseShape"
 
-extern fn _raw_clipboard_pop(vx: RawVaxis) Str!Str = "ClipboardPop"
+private extern fn raw_clipboard_pop(vx: RawVaxis) Str!Str = "ClipboardPop"
 
-extern fn _raw_notify_working_directory(vx: RawVaxis, path: Str) Void = "NotifyWorkingDirectory"
+private extern fn raw_notify_working_directory(vx: RawVaxis, path: Str) Void = "NotifyWorkingDirectory"
 
-extern fn _raw_set_app_id(vx: RawVaxis, id: Str) Void = "SetAppID"
+private extern fn raw_set_app_id(vx: RawVaxis, id: Str) Void = "SetAppID"
 
-extern fn _raw_query_color(vx: RawVaxis, index: Int) Int = "QueryColor"
+private extern fn raw_query_color(vx: RawVaxis, index: Int) Int = "QueryColor"
 
-extern fn _raw_query_foreground(vx: RawVaxis) Int = "QueryForeground"
+private extern fn raw_query_foreground(vx: RawVaxis) Int = "QueryForeground"
 
-extern fn _raw_query_background(vx: RawVaxis) Int = "QueryBackground"
+private extern fn raw_query_background(vx: RawVaxis) Int = "QueryBackground"
 
-extern fn _raw_can_report_color(vx: RawVaxis) Bool = "CanReportColor"
+private extern fn raw_can_report_color(vx: RawVaxis) Bool = "CanReportColor"
 
-extern fn _raw_can_report_foreground_color(vx: RawVaxis) Bool = "CanReportForegroundColor"
+private extern fn raw_can_report_foreground_color(vx: RawVaxis) Bool = "CanReportForegroundColor"
 
-extern fn _raw_can_report_background_color(vx: RawVaxis) Bool = "CanReportBackgroundColor"
+private extern fn raw_can_report_background_color(vx: RawVaxis) Bool = "CanReportBackgroundColor"
 
-extern fn _raw_can_set_app_id(vx: RawVaxis) Bool = "CanSetAppID"
+private extern fn raw_can_set_app_id(vx: RawVaxis) Bool = "CanSetAppID"
 
-extern fn _raw_can_explicit_width(vx: RawVaxis) Bool = "CanExplicitWidth"
+private extern fn raw_can_explicit_width(vx: RawVaxis) Bool = "CanExplicitWidth"
 
-extern fn _raw_can_in_band_resize(vx: RawVaxis) Bool = "CanInBandResize"
+private extern fn raw_can_in_band_resize(vx: RawVaxis) Bool = "CanInBandResize"
 
 // ── Style at position
 
-extern fn _raw_set_style(
+private extern fn raw_set_style(
   vx: RawVaxis,
   col: Int,
   row: Int,
@@ -163,7 +163,7 @@ extern fn _raw_set_style(
 
 // ── Window text (Go handles grapheme segmentation + wrapping)
 
-extern fn _raw_print(
+private extern fn raw_print(
   vx: RawVaxis,
   col: Int,
   row: Int,
@@ -177,7 +177,7 @@ extern fn _raw_print(
   attrss: [Int],
 ) Int = "Print"
 
-extern fn _raw_println(
+private extern fn raw_println(
   vx: RawVaxis,
   col: Int,
   row: Int,
@@ -190,7 +190,7 @@ extern fn _raw_println(
   attrss: [Int],
 ) Void = "Println"
 
-extern fn _raw_print_truncate(
+private extern fn raw_print_truncate(
   vx: RawVaxis,
   col: Int,
   row: Int,
@@ -205,19 +205,19 @@ extern fn _raw_print_truncate(
 
 // ── Image / Graphics
 
-extern fn _raw_new_image(vx: RawVaxis, path: Str) RawImage!Str = "NewImage"
+private extern fn raw_new_image(vx: RawVaxis, path: Str) RawImage!Str = "NewImage"
 
-extern fn _raw_image_draw(img: RawImage, vx: RawVaxis, col: Int, row: Int) Void = "ImageDraw"
+private extern fn raw_image_draw(img: RawImage, vx: RawVaxis, col: Int, row: Int) Void = "ImageDraw"
 
-extern fn _raw_image_resize(img: RawImage, vx: RawVaxis, width: Int, height: Int) Void = "ImageResize"
+private extern fn raw_image_resize(img: RawImage, vx: RawVaxis, width: Int, height: Int) Void = "ImageResize"
 
-extern fn _raw_image_destroy(img: RawImage) Void = "ImageDestroy"
+private extern fn raw_image_destroy(img: RawImage) Void = "ImageDestroy"
 
-extern fn _raw_image_cell_width(img: RawImage) Int = "ImageCellWidth"
+private extern fn raw_image_cell_width(img: RawImage) Int = "ImageCellWidth"
 
-extern fn _raw_image_cell_height(img: RawImage) Int = "ImageCellHeight"
+private extern fn raw_image_cell_height(img: RawImage) Int = "ImageCellHeight"
 
-extern fn _raw_wrap(
+private extern fn raw_wrap(
   vx: RawVaxis,
   col: Int,
   row: Int,
@@ -715,7 +715,7 @@ impl Window {
     let in_bounds = col >= 0 and col < self.width and row >= 0 and row < self.height
     if in_bounds {
       let s = cell.style
-      _raw_set_cell(
+      raw_set_cell(
         self.vx,
         self.col_offset + col,
         self.row_offset + row,
@@ -734,7 +734,7 @@ impl Window {
     let s = cell.style
     let attrs = style_attrs(s)
     let ul = s.ul_style.to_int()
-    _raw_fill_region(
+    raw_fill_region(
       self.vx,
       self.col_offset,
       self.row_offset,
@@ -750,19 +750,19 @@ impl Window {
   }
 
   fn mut clear() {
-    _raw_clear_region(self.vx, self.col_offset, self.row_offset, self.width, self.height)
+    raw_clear_region(self.vx, self.col_offset, self.row_offset, self.width, self.height)
   }
 
   fn mut show_cursor(col: Int, row: Int) {
-    _raw_show_cursor(self.vx, self.col_offset + col, self.row_offset + row)
+    raw_show_cursor(self.vx, self.col_offset + col, self.row_offset + row)
   }
 
   fn mut show_cursor_styled(col: Int, row: Int, style: CursorStyle) {
-    _raw_show_cursor_styled(self.vx, self.col_offset + col, self.row_offset + row, style.to_int())
+    raw_show_cursor_styled(self.vx, self.col_offset + col, self.row_offset + row, style.to_int())
   }
 
   fn mut write(col: Int, row: Int, text: Str, style: Style) {
-    _raw_write(
+    raw_write(
       self.vx,
       self.col_offset + col,
       self.row_offset + row,
@@ -776,7 +776,7 @@ impl Window {
   }
 
   fn mut write_line(row: Int, col: Int, text: Str, style: Style) {
-    _raw_write(
+    raw_write(
       self.vx,
       self.col_offset + col,
       self.row_offset + row,
@@ -796,7 +796,7 @@ impl Window {
   fn mut set_style(col: Int, row: Int, style: Style) {
     let in_bounds = col >= 0 and col < self.width and row >= 0 and row < self.height
     if in_bounds {
-      _raw_set_style(
+      raw_set_style(
         self.vx,
         self.col_offset + col,
         self.row_offset + row,
@@ -825,7 +825,7 @@ impl Window {
       ul_styles.push(s.ul_style.to_int())
       attrss.push(style_attrs(s))
     }
-    let pos = _raw_print(
+    let pos = raw_print(
       self.vx,
       self.col_offset + col,
       self.row_offset + row,
@@ -852,7 +852,7 @@ impl Window {
       ul_styles.push(s.ul_style.to_int())
       attrss.push(style_attrs(s))
     }
-    _raw_println(
+    raw_println(
       self.vx,
       self.col_offset + col,
       self.row_offset + row,
@@ -877,7 +877,7 @@ impl Window {
       ul_styles.push(s.ul_style.to_int())
       attrss.push(style_attrs(s))
     }
-    _raw_print_truncate(
+    raw_print_truncate(
       self.vx,
       self.col_offset + col,
       self.row_offset + row,
@@ -902,7 +902,7 @@ impl Window {
       ul_styles.push(s.ul_style.to_int())
       attrss.push(style_attrs(s))
     }
-    let pos = _raw_wrap(
+    let pos = raw_wrap(
       self.vx,
       self.col_offset + col,
       self.row_offset + row,
@@ -953,45 +953,45 @@ fn pack_options(opts: Options) Int {
 
 fn app_open(title: Str, opts: Options?) App!Str {
   let opts = opts.or(default_options())
-  let vx = try _raw_open_with(title, pack_options(opts))
-  Result::ok(App{ vx: vx, width: _raw_width(vx), height: _raw_height(vx) })
+  let vx = try raw_open_with(title, pack_options(opts))
+  Result::ok(App{ vx: vx, width: raw_width(vx), height: raw_height(vx) })
 }
 
 impl App {
   fn mut close() Void!Str {
-    _raw_close(self.vx)
+    raw_close(self.vx)
   }
 
   fn mut suspend() Void!Str {
-    _raw_suspend(self.vx)
+    raw_suspend(self.vx)
   }
 
   fn mut resume() Void!Str {
-    _raw_resume(self.vx)
+    raw_resume(self.vx)
   }
 
   fn mut render() Void!Str {
-    _raw_render(self.vx)
+    raw_render(self.vx)
   }
 
   fn mut refresh() Void {
-    _raw_refresh(self.vx)
+    raw_refresh(self.vx)
   }
 
   fn mut hide_cursor() Void {
-    _raw_hide_cursor(self.vx)
+    raw_hide_cursor(self.vx)
   }
 
   fn mut show_cursor(col: Int, row: Int) Void {
-    _raw_show_cursor(self.vx, col, row)
+    raw_show_cursor(self.vx, col, row)
   }
 
   fn mut show_cursor_styled(col: Int, row: Int, style: CursorStyle) Void {
-    _raw_show_cursor_styled(self.vx, col, row, style.to_int())
+    raw_show_cursor_styled(self.vx, col, row, style.to_int())
   }
 
   fn mut read_key() Str!Str {
-    let raw = try _raw_read_key(self.vx)
+    let raw = try raw_read_key(self.vx)
     mut key = "redraw"
     if raw.starts_with("key:") {
       let rest = raw.replace("key:", "")
@@ -1007,7 +1007,7 @@ impl App {
   }
 
   fn mut read_event() Event!Str {
-    let key = try _raw_read_key(self.vx)
+    let key = try raw_read_key(self.vx)
     Result::ok(parse_event(key))
   }
 
@@ -1020,38 +1020,38 @@ impl App {
     root.child(col, row, width, height)
   }
 
-  fn can_rgb() Bool { _raw_can_rgb(self.vx) }
-  fn can_sixel() Bool { _raw_can_sixel(self.vx) }
-  fn can_kitty_graphics() Bool { _raw_can_kitty_graphics(self.vx) }
-  fn can_unicode_core() Bool { _raw_can_unicode_core(self.vx) }
-  fn can_display_graphics() Bool { _raw_can_display_graphics(self.vx) }
+  fn can_rgb() Bool { raw_can_rgb(self.vx) }
+  fn can_sixel() Bool { raw_can_sixel(self.vx) }
+  fn can_kitty_graphics() Bool { raw_can_kitty_graphics(self.vx) }
+  fn can_unicode_core() Bool { raw_can_unicode_core(self.vx) }
+  fn can_display_graphics() Bool { raw_can_display_graphics(self.vx) }
 
-  fn mut bell() Void { _raw_bell(self.vx) }
-  fn mut set_title(title: Str) Void { _raw_set_title(self.vx, title) }
-  fn mut notify(title: Str, body: Str) Void { _raw_notify(self.vx, title, body) }
-  fn mut clipboard_push(text: Str) Void { _raw_clipboard_push(self.vx, text) }
-  fn rendered_width(text: Str) Int { _raw_rendered_width(self.vx, text) }
-  fn terminal_id() Str { _raw_terminal_id(self.vx) }
-  fn text_backspace(text: Str) Str { _raw_text_backspace(text) }
+  fn mut bell() Void { raw_bell(self.vx) }
+  fn mut set_title(title: Str) Void { raw_set_title(self.vx, title) }
+  fn mut notify(title: Str, body: Str) Void { raw_notify(self.vx, title, body) }
+  fn mut clipboard_push(text: Str) Void { raw_clipboard_push(self.vx, text) }
+  fn rendered_width(text: Str) Int { raw_rendered_width(self.vx, text) }
+  fn terminal_id() Str { raw_terminal_id(self.vx) }
+  fn text_backspace(text: Str) Str { raw_text_backspace(text) }
 
   // ── P1: Mouse, clipboard, queries ────────────────────────────────
 
-  fn mut set_mouse_shape(shape: Str) Void { _raw_set_mouse_shape(self.vx, shape) }
-  fn mut clipboard_pop() Str!Str { _raw_clipboard_pop(self.vx) }
-  fn mut notify_working_directory(path: Str) Void { _raw_notify_working_directory(self.vx, path) }
-  fn mut set_app_id(id: Str) Void { _raw_set_app_id(self.vx, id) }
-  fn query_color(index: Int) Int { _raw_query_color(self.vx, index) }
-  fn query_foreground() Int { _raw_query_foreground(self.vx) }
-  fn query_background() Int { _raw_query_background(self.vx) }
-  fn can_report_color() Bool { _raw_can_report_color(self.vx) }
-  fn can_report_foreground_color() Bool { _raw_can_report_foreground_color(self.vx) }
-  fn can_report_background_color() Bool { _raw_can_report_background_color(self.vx) }
-  fn can_set_app_id() Bool { _raw_can_set_app_id(self.vx) }
-  fn can_explicit_width() Bool { _raw_can_explicit_width(self.vx) }
-  fn can_in_band_resize() Bool { _raw_can_in_band_resize(self.vx) }
+  fn mut set_mouse_shape(shape: Str) Void { raw_set_mouse_shape(self.vx, shape) }
+  fn mut clipboard_pop() Str!Str { raw_clipboard_pop(self.vx) }
+  fn mut notify_working_directory(path: Str) Void { raw_notify_working_directory(self.vx, path) }
+  fn mut set_app_id(id: Str) Void { raw_set_app_id(self.vx, id) }
+  fn query_color(index: Int) Int { raw_query_color(self.vx, index) }
+  fn query_foreground() Int { raw_query_foreground(self.vx) }
+  fn query_background() Int { raw_query_background(self.vx) }
+  fn can_report_color() Bool { raw_can_report_color(self.vx) }
+  fn can_report_foreground_color() Bool { raw_can_report_foreground_color(self.vx) }
+  fn can_report_background_color() Bool { raw_can_report_background_color(self.vx) }
+  fn can_set_app_id() Bool { raw_can_set_app_id(self.vx) }
+  fn can_explicit_width() Bool { raw_can_explicit_width(self.vx) }
+  fn can_in_band_resize() Bool { raw_can_in_band_resize(self.vx) }
 
   fn new_image(path: Str) Image!Str {
-    let raw = try _raw_new_image(self.vx, path)
+    let raw = try raw_new_image(self.vx, path)
     Result::ok(Image{ handle: raw })
   }
 }
@@ -1064,18 +1064,18 @@ struct Image {
 
 impl Image {
   fn mut draw(app: App, col: Int, row: Int) {
-    _raw_image_draw(self.handle, app.vx, col, row)
+    raw_image_draw(self.handle, app.vx, col, row)
   }
 
   fn mut resize(app: App, width: Int, height: Int) {
-    _raw_image_resize(self.handle, app.vx, width, height)
+    raw_image_resize(self.handle, app.vx, width, height)
   }
 
   fn mut destroy() {
-    _raw_image_destroy(self.handle)
+    raw_image_destroy(self.handle)
   }
 
-  fn cell_width() Int { _raw_image_cell_width(self.handle) }
+  fn cell_width() Int { raw_image_cell_width(self.handle) }
 
-  fn cell_height() Int { _raw_image_cell_height(self.handle) }
+  fn cell_height() Int { raw_image_cell_height(self.handle) }
 }
