@@ -77,18 +77,22 @@ fn build_list(model: TodoUiState) [ui::Widget] {
 }
 
 fn editing_view(draft: Str, placeholder: Str, on_changed: fn(ui::EventContext, Str), on_submitted: fn(ui::EventContext, Str)) ui::Widget {
-  ui::column([
-    ui::padding(1, ui::text("Editing todo:")),
-    ui::padding(1, ui::text_field(
-      value: draft,
-      placeholder: placeholder,
-      min_width: 40,
-      obscure: false,
-      on_changed: on_changed,
-      on_submitted: on_submitted,
-    )),
-    ui::padding(1, ui::text("Enter: save  Esc: cancel")),
-  ])
+  ui::focus_scope(
+    child: ui::column([
+      ui::padding(1, ui::text("Editing todo:")),
+      ui::padding(1, ui::text_field(
+        value: draft,
+        placeholder: placeholder,
+        min_width: 40,
+        obscure: false,
+        on_changed: on_changed,
+        on_submitted: on_submitted,
+      )),
+      ui::padding(1, ui::text("Enter: save  Esc: cancel")),
+    ]),
+    trap: false,
+    auto_focus: true,
+  )
 }
 
 fn add_todo_to_list(todos: [Todo]) [Todo] {
