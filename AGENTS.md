@@ -57,6 +57,9 @@ examples/
 - Keep `extern fn` declarations minimal and focused
 - Mutating methods use `mut fn` in `impl` blocks
 - Public API uses traits for extensibility (e.g. `Widget`, `Drawable`)
+- **FFI externs are prefixed `_raw_`** (e.g. `_raw_open`, `_raw_render`).
+  These are private implementation details. Consumer-facing API wraps them
+  in methods on `App`, `Window`, or free functions.
 
 ## Key Ard language notes
 
