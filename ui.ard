@@ -272,6 +272,25 @@ fn cursor(col: Int, row: Int, shape: Int, hidden: Bool, child: Widget) Widget {
   _cursor(col, row, shape, hidden, child)
 }
 
+// ── Animation ─────────────────────────────────────────────────────────
+
+extern type AnimationController = "*ui.AnimationController"
+
+extern fn _anim_new(state_ctx: StateHandle, duration_ms: Int) AnimationController = "UiNewAnimation"
+extern fn _anim_forward(ctrl: AnimationController) Void = "UiAnimForward"
+extern fn _anim_reset(ctrl: AnimationController) Void = "UiAnimReset"
+extern fn _anim_stop(ctrl: AnimationController) Void = "UiAnimStop"
+extern fn _anim_value(ctrl: AnimationController) Float = "UiAnimValue"
+
+fn animation_controller<$T>(state: State<$T>, duration_ms: Int) AnimationController {
+  _anim_new(state.handle, duration_ms)
+}
+
+fn anim_forward(ctrl: AnimationController) { _anim_forward(ctrl) }
+fn anim_reset(ctrl: AnimationController) { _anim_reset(ctrl) }
+fn anim_stop(ctrl: AnimationController) { _anim_stop(ctrl) }
+fn anim_value(ctrl: AnimationController) Float { _anim_value(ctrl) }
+
 // ── ProgressBar ───────────────────────────────────────────────────────
 
 extern fn _progress_bar(value: Float, width: Int, filled_fg: Int, filled_bg: Int, filled_attrs: Int, empty_fg: Int, empty_bg: Int, empty_attrs: Int) Widget = "UiProgressBar"

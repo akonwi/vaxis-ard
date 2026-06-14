@@ -1,6 +1,8 @@
 package ffi
 
 import (
+	"time"
+
 	"git.sr.ht/~rockorager/vaxis"
 	"git.sr.ht/~rockorager/vaxis/ui"
 )
@@ -14,6 +16,7 @@ type UiEventContext = ui.EventContext
 type UiStateContext struct {
 	Value          any
 	markNeedsBuild func()
+	sb             *ui.StateBase
 }
 
 func UiStateValue[T any](ctx *UiStateContext) T {
@@ -128,9 +131,10 @@ type uiStatefulState[T any] struct {
 }
 
 func (s *uiStatefulState[T]) Build(ctx ui.BuildContext) ui.Widget {
-	// Wire up rebuild trigger once the element is attached.
+	// Wire up rebuild trigger and state base once the element is attached.
 	if s.state.markNeedsBuild == nil {
 		s.state.markNeedsBuild = s.MarkNeedsBuild
+		s.state.sb = &s.StateBase
 	}
 	if s.state.Value == nil {
 		s.state.Value = s.widget.Init(ctx, s.state)
@@ -350,6 +354,23 @@ func UiTableRowNew(children []ui.Widget) UiTableRow { return UiTableRow{Children
 
 func UiCursor(col, row, shape int, hidden bool, child ui.Widget) ui.Widget {
 	return ui.Cursor{Col: col, Row: row, Shape: ui.CursorStyle(shape), Hidden: hidden, Child: child}
+}
+
+// ─── Animation ────────────────────────────────────────────────────────
+
+func UiNewAnimation(stateCtx *UiStateContext, durationMs int) *ui.AnimationController {
+	if stateCtx == nil || stateCtx.sb == nil {
+		return nil
+	}
+	return stateCtx.sb.NewAnimation(ui.AnimationOptions{Duration: time.Duration(durationMs) * time.Millisecond})
+}
+
+func UiAnimForward(ctrl *ui.AnimationController)  { if ctrl != nil { ctrl.Forward() } }
+func UiAnimReset(ctrl *ui.AnimationController)   { if ctrl != nil { ctrl.Reset() } }
+func UiAnimStop(ctrl *ui.AnimationController)    { if ctrl != nil { ctrl.Stop() } }
+func UiAnimValue(ctrl *ui.AnimationController) float64 {
+	if ctrl == nil { return 0 }
+	return ctrl.Value()
 }
 
 func UiModalBarrier(fg, bg, ulColor, ulStyle, attrs int, opacity int) ui.Widget {
