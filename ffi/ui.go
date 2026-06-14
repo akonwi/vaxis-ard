@@ -177,6 +177,17 @@ func UiTextField(value, placeholder string, minWidth int, obscure bool, onChange
 	}
 }
 
+func UiTextArea(value, placeholder string, minWidth, minHeight int, softWrap bool, onChanged func(ui.EventContext, string)) ui.Widget {
+	return ui.TextArea{
+		Value:       value,
+		Placeholder: placeholder,
+		MinWidth:    minWidth,
+		MinHeight:   minHeight,
+		SoftWrap:    softWrap,
+		OnChanged:   onChanged,
+	}
+}
+
 // ─── Scroll ───────────────────────────────────────────────────────────
 
 func UiScrollView(child ui.Widget) ui.Widget {

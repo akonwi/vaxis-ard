@@ -128,6 +128,35 @@ fn text_field(
   )
 }
 
+// ── TextArea ──────────────────────────────────────────────────────────
+
+extern fn _text_area(
+  value: Str,
+  placeholder: Str,
+  min_width: Int,
+  min_height: Int,
+  soft_wrap: Bool,
+  on_changed: fn(EventContextHandle, Str),
+) Widget = "UiTextArea"
+
+fn text_area(
+  value: Str,
+  placeholder: Str,
+  min_width: Int,
+  min_height: Int,
+  soft_wrap: Bool,
+  on_changed: fn(EventContext, Str),
+) Widget {
+  _text_area(
+    value,
+    placeholder,
+    min_width,
+    min_height,
+    soft_wrap,
+    fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) },
+  )
+}
+
 // ── Scroll ───────────────────────────────────────────────────────────
 
 extern fn _scroll_view(child: Widget) Widget = "UiScrollView"
