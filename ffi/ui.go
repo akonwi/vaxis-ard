@@ -315,6 +315,39 @@ func UiMakeCmdItem(title, description string, aliases []string) UiCommandPalette
 	return UiCommandPaletteItem{Title: title, Description: description, Aliases: aliases}
 }
 
+type UiTableColumn struct {
+	Kind  int
+	Value int
+}
+
+type UiTableRow struct {
+	Children []ui.Widget
+}
+
+func UiTable(columns []UiTableColumn, columnGap, rowGap int, rows []UiTableRow) ui.Widget {
+	cols := make([]ui.TableColumn, len(columns))
+	for i, c := range columns {
+		switch c.Kind {
+		case 1:
+			cols[i] = ui.FixedColumn(c.Value)
+		case 2:
+			cols[i] = ui.FlexColumn(c.Value)
+		default:
+			cols[i] = ui.IntrinsicColumn()
+		}
+	}
+	tblRows := make([]ui.TableRow, len(rows))
+	for i, r := range rows {
+		tblRows[i] = ui.TableRow{Children: r.Children}
+	}
+	return ui.Table{Columns: cols, ColumnGap: columnGap, RowGap: rowGap, Rows: tblRows}
+}
+
+func UiTableColumnIntrinsic() UiTableColumn { return UiTableColumn{Kind: 0} }
+func UiTableColumnFixed(width int) UiTableColumn  { return UiTableColumn{Kind: 1, Value: width} }
+func UiTableColumnFlex(flex int) UiTableColumn    { return UiTableColumn{Kind: 2, Value: flex} }
+func UiTableRowNew(children []ui.Widget) UiTableRow { return UiTableRow{Children: children} }
+
 func UiModalBarrier(fg, bg, ulColor, ulStyle, attrs int, opacity int) ui.Widget {
 	return ui.ModalBarrier{Color: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs).Background, Opacity: uint8(opacity)}
 }

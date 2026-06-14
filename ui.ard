@@ -236,6 +236,26 @@ fn command_palette(
   )
 }
 
+// ── Table ─────────────────────────────────────────────────────────────
+
+extern type TableColumn = "ffi.UiTableColumn"
+extern type TableRow = "ffi.UiTableRow"
+
+extern fn _table(columns: [TableColumn], column_gap: Int, row_gap: Int, rows: [TableRow]) Widget = "UiTable"
+extern fn _table_column_intrinsic() TableColumn = "UiTableColumnIntrinsic"
+extern fn _table_column_fixed(width: Int) TableColumn = "UiTableColumnFixed"
+extern fn _table_column_flex(flex: Int) TableColumn = "UiTableColumnFlex"
+extern fn _table_row(children: [Widget]) TableRow = "UiTableRowNew"
+
+fn table_column_intrinsic() TableColumn { _table_column_intrinsic() }
+fn table_column_fixed(width: Int) TableColumn { _table_column_fixed(width) }
+fn table_column_flex(flex: Int) TableColumn { _table_column_flex(flex) }
+fn table_row(children: [Widget]) TableRow { _table_row(children) }
+
+fn table(columns: [TableColumn], column_gap: Int, row_gap: Int, rows: [TableRow]) Widget {
+  _table(columns, column_gap, row_gap, rows)
+}
+
 // ── ProgressBar ───────────────────────────────────────────────────────
 
 extern fn _progress_bar(value: Float, width: Int, filled_fg: Int, filled_bg: Int, filled_attrs: Int, empty_fg: Int, empty_bg: Int, empty_attrs: Int) Widget = "UiProgressBar"
