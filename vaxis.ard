@@ -7,6 +7,8 @@
 
 extern type RawVaxis = "*vaxis.Vaxis"
 
+extern type RawImage = "vaxis.Image"
+
 // ── Lifecycle
 
 extern fn _raw_open(title: Str) RawVaxis!Str = "Open"
@@ -200,6 +202,20 @@ extern fn _raw_print_truncate(
   ul_styles: [Int],
   attrss: [Int],
 ) Void = "PrintTruncate"
+
+// ── Image / Graphics
+
+extern fn _raw_new_image(vx: RawVaxis, path: Str) RawImage!Str = "NewImage"
+
+extern fn _raw_image_draw(img: RawImage, vx: RawVaxis, col: Int, row: Int) Void = "ImageDraw"
+
+extern fn _raw_image_resize(img: RawImage, vx: RawVaxis, width: Int, height: Int) Void = "ImageResize"
+
+extern fn _raw_image_destroy(img: RawImage) Void = "ImageDestroy"
+
+extern fn _raw_image_cell_width(img: RawImage) Int = "ImageCellWidth"
+
+extern fn _raw_image_cell_height(img: RawImage) Int = "ImageCellHeight"
 
 extern fn _raw_wrap(
   vx: RawVaxis,
@@ -1033,4 +1049,33 @@ impl App {
   fn can_set_app_id() Bool { _raw_can_set_app_id(self.vx) }
   fn can_explicit_width() Bool { _raw_can_explicit_width(self.vx) }
   fn can_in_band_resize() Bool { _raw_can_in_band_resize(self.vx) }
+
+  fn new_image(path: Str) Image!Str {
+    let raw = try _raw_new_image(self.vx, path)
+    Result::ok(Image{ handle: raw })
+  }
+}
+
+// ─── Image ─────────────────────────────────────────────────────────────
+
+struct Image {
+  handle: RawImage,
+}
+
+impl Image {
+  fn mut draw(app: App, col: Int, row: Int) {
+    _raw_image_draw(self.handle, app.vx, col, row)
+  }
+
+  fn mut resize(app: App, width: Int, height: Int) {
+    _raw_image_resize(self.handle, app.vx, width, height)
+  }
+
+  fn mut destroy() {
+    _raw_image_destroy(self.handle)
+  }
+
+  fn cell_width() Int { _raw_image_cell_width(self.handle) }
+
+  fn cell_height() Int { _raw_image_cell_height(self.handle) }
 }

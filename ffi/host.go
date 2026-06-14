@@ -3,6 +3,8 @@ package ffi
 import (
 	"context"
 	"fmt"
+	"image"
+	"os"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -594,4 +596,72 @@ func colorFromInt(value int) vaxis.Color {
 		return vaxis.IndexColor(uint8(value))
 	}
 	return vaxis.HexColor(uint32(value))
+}
+
+// ─── Image / Graphics ────────────────────────────────────────────────────
+
+// NewImage creates a vaxis Image from a file path, auto-selecting the best
+// protocol the terminal supports (kitty > sixel > halfblock > fullblock).
+func NewImage(vx *vaxis.Vaxis, path string) (vaxis.Image, error) {
+	if vx == nil {
+		return nil, fmt.Errorf("vaxis not initialized")
+	}
+	img, err := loadImageFromFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return vx.NewImage(img)
+}
+
+// ImageDraw draws the image at the given cell coordinates.
+func ImageDraw(img vaxis.Image, vx *vaxis.Vaxis, col, row int) {
+	if img == nil || vx == nil {
+		return
+	}
+	win := vx.Window().New(col, row, vx.Window().Width, vx.Window().Height)
+	img.Draw(win)
+}
+
+// ImageResize resizes the image to fit within the given cell dimensions.
+// A Redraw event is posted asynchronously when complete.
+func ImageResize(img vaxis.Image, vx *vaxis.Vaxis, width, height int) {
+	if img == nil || vx == nil {
+		return
+	}
+	img.Resize(width, height)
+}
+
+// ImageDestroy frees the image resources.
+func ImageDestroy(img vaxis.Image) {
+	if img != nil {
+		img.Destroy()
+	}
+}
+
+// ImageCellWidth returns the image width in cells.
+func ImageCellWidth(img vaxis.Image) int {
+	if img == nil {
+		return 0
+	}
+	w, _ := img.CellSize()
+	return w
+}
+
+// ImageCellHeight returns the image height in cells.
+func ImageCellHeight(img vaxis.Image) int {
+	if img == nil {
+		return 0
+	}
+	_, h := img.CellSize()
+	return h
+}
+
+func loadImageFromFile(path string) (image.Image, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	img, _, err := image.Decode(f)
+	return img, err
 }
