@@ -397,6 +397,37 @@ fn scroll_pane_scroll_to(controller: ScrollPaneController, col: Int, row: Int) B
   _scroll_pane_scroll_to(controller, col, row)
 }
 
+// ── CustomScrollView / Slivers ────────────────────────────────────────
+
+extern type ScrollController = "*ui.ScrollController"
+
+extern fn _scroll_controller() ScrollController = "UiScrollController"
+extern fn _scroll_controller_scroll_by_lines(controller: ScrollController, lines: Int) Bool = "UiScrollControllerScrollByLines"
+extern fn _scroll_controller_scroll_to_offset(controller: ScrollController, row: Int) Bool = "UiScrollControllerScrollToOffset"
+extern fn _scroll_controller_scroll_to_start(controller: ScrollController) Bool = "UiScrollControllerScrollToStart"
+extern fn _scroll_controller_scroll_to_end(controller: ScrollController) Bool = "UiScrollControllerScrollToEnd"
+
+extern fn _custom_scroll_view(controller: ScrollController, slivers: [Widget]) Widget = "UiCustomScrollView"
+extern fn _sliver_to_box(child: Widget) Widget = "UiSliverToBox"
+extern fn _sliver_pinned_header(child: Widget) Widget = "UiSliverPinnedHeader"
+extern fn _sliver_fill_remaining(child: Widget) Widget = "UiSliverFillRemaining"
+extern fn _sliver_list(children: [Widget]) Widget = "UiSliverList"
+
+fn scroll_controller() ScrollController { _scroll_controller() }
+fn scroll_controller_scroll_by_lines(c: ScrollController, lines: Int) Bool { _scroll_controller_scroll_by_lines(c, lines) }
+fn scroll_controller_scroll_to_offset(c: ScrollController, row: Int) Bool { _scroll_controller_scroll_to_offset(c, row) }
+fn scroll_controller_scroll_to_start(c: ScrollController) Bool { _scroll_controller_scroll_to_start(c) }
+fn scroll_controller_scroll_to_end(c: ScrollController) Bool { _scroll_controller_scroll_to_end(c) }
+
+fn custom_scroll_view(controller: ScrollController, slivers: [Widget]) Widget {
+  _custom_scroll_view(controller, slivers)
+}
+
+fn sliver_to_box(child: Widget) Widget { _sliver_to_box(child) }
+fn sliver_pinned_header(child: Widget) Widget { _sliver_pinned_header(child) }
+fn sliver_fill_remaining(child: Widget) Widget { _sliver_fill_remaining(child) }
+fn sliver_list(children: [Widget]) Widget { _sliver_list(children) }
+
 // ── Actions ───────────────────────────────────────────────────────────
 
 extern fn _actions(child: Widget, bindings: [ActionBinding]) Widget   = "UiActions"

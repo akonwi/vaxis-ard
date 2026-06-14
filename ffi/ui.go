@@ -346,6 +346,46 @@ func UiScrollPaneScrollTo(controller *ui.ScrollPaneController, col, row int) boo
 	return controller.ScrollTo(col, row)
 }
 
+func UiScrollController() *ui.ScrollController {
+	return &ui.ScrollController{}
+}
+
+func UiScrollControllerScrollByLines(controller *ui.ScrollController, lines int) bool {
+	return controller.ScrollByLines(lines)
+}
+
+func UiScrollControllerScrollToOffset(controller *ui.ScrollController, row int) bool {
+	return controller.ScrollToOffset(row)
+}
+
+func UiScrollControllerScrollToStart(controller *ui.ScrollController) bool {
+	return controller.ScrollToStart()
+}
+
+func UiScrollControllerScrollToEnd(controller *ui.ScrollController) bool {
+	return controller.ScrollToEnd()
+}
+
+func UiCustomScrollView(controller *ui.ScrollController, slivers []ui.Widget) ui.Widget {
+	return ui.CustomScrollView{Controller: controller, Slivers: slivers}
+}
+
+func UiSliverToBox(child ui.Widget) ui.Widget {
+	return ui.SliverToBox{Child: child}
+}
+
+func UiSliverPinnedHeader(child ui.Widget) ui.Widget {
+	return ui.SliverPinnedHeader{Child: child}
+}
+
+func UiSliverFillRemaining(child ui.Widget) ui.Widget {
+	return ui.SliverFillRemaining{Child: child}
+}
+
+func UiSliverList(children []ui.Widget) ui.Widget {
+	return ui.SliverList{Children: children}
+}
+
 // ─── App runner ───────────────────────────────────────────────────────
 
 func UiRun(root ui.Widget) error {
