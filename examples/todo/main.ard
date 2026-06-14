@@ -50,7 +50,9 @@ fn todo_row(todo: Todo, index: Int, selected: Int) ui::Widget {
   let title = ui::styled_text(todo.title, fg: -1, bg: -1, attrs: attrs)
   ui::row([
     arrow,
+    ui::text(" "),
     ui::checkbox(checked: todo.done, label: "", disabled: true, on_changed: fn(ctx: ui::EventContext, next: Bool) {}),
+    ui::text(" "),
     title,
   ])
 }
