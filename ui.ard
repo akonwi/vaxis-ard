@@ -167,6 +167,25 @@ fn list_tile(title: Widget, selected: Bool, disabled: Bool?, on_pressed: fn(Even
   )
 }
 
+// ── Overlay ───────────────────────────────────────────────────────────
+
+extern type OverlayEntry = "ffi.UiOverlayEntry"
+
+extern fn _overlay(child: Widget, entries: [OverlayEntry]) Widget = "UiOverlay"
+extern fn _overlay_entry(child: Widget, modal: Bool, align_x: Int, align_y: Int) OverlayEntry = "UiMakeOverlayEntry"
+
+fn overlay_entry(child: Widget, modal: Bool, align_x: Int, align_y: Int) OverlayEntry {
+  _overlay_entry(child, modal, align_x, align_y)
+}
+
+fn overlay(child: Widget, entries: [OverlayEntry]) Widget {
+  _overlay(child, entries)
+}
+
+fn overlay_modal(child: Widget, modal_child: Widget) Widget {
+  _overlay(child, [_overlay_entry(modal_child, true, 0, 0)])
+}
+
 // ── ProgressBar ───────────────────────────────────────────────────────
 
 extern fn _progress_bar(value: Float, width: Int, filled_fg: Int, filled_bg: Int, filled_attrs: Int, empty_fg: Int, empty_bg: Int, empty_attrs: Int) Widget = "UiProgressBar"

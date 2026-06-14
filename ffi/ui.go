@@ -252,6 +252,29 @@ func UiDialog(title string, child ui.Widget, actions []ui.Widget, width int, onD
 	return ui.Dialog{Title: title, Child: child, Actions: actions, Width: width, OnDismiss: onDismiss}
 }
 
+type UiOverlayEntry struct {
+	Child     ui.Widget
+	Modal     bool
+	AlignX    int
+	AlignY    int
+}
+
+func UiOverlay(child ui.Widget, entries []UiOverlayEntry) ui.Widget {
+	s := make([]ui.OverlayEntry, len(entries))
+	for i, e := range entries {
+		s[i] = ui.OverlayEntry{
+			Child:     e.Child,
+			Modal:     e.Modal,
+			Alignment: ui.Alignment{X: e.AlignX, Y: e.AlignY},
+		}
+	}
+	return ui.Overlay{Child: child, Entries: s}
+}
+
+func UiMakeOverlayEntry(child ui.Widget, modal bool, alignX, alignY int) UiOverlayEntry {
+	return UiOverlayEntry{Child: child, Modal: modal, AlignX: alignX, AlignY: alignY}
+}
+
 func UiModalBarrier(fg, bg, ulColor, ulStyle, attrs int, opacity int) ui.Widget {
 	return ui.ModalBarrier{Color: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs).Background, Opacity: uint8(opacity)}
 }
