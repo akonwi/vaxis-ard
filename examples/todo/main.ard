@@ -210,6 +210,25 @@ fn root_widget() ui::Widget {
         body = editing_view(model.draft, placeholder, on_changed, on_submitted)
       }
 
+      mut shortcut_map = [
+        "q": "quit",
+        "j": "down",
+        "k": "up",
+        "Down": "down",
+        "Up": "up",
+        "Enter": "enter",
+        "space": "enter",
+        "e": "edit",
+        "a": "add",
+        "d": "delete",
+      ]
+      if model.editing {
+        shortcut_map = [
+          "Enter": "enter",
+          "Escape": "cancel",
+        ]
+      }
+
       ui::shortcuts(
         ui::actions(
           ui::focus(ui::center(body)),
@@ -253,19 +272,7 @@ fn root_widget() ui::Widget {
             }),
           ],
         ),
-        [
-          "q": "quit",
-          "j": "down",
-          "k": "up",
-          "Down": "down",
-          "Up": "up",
-          "Enter": "enter",
-          "space": "enter",
-          "e": "edit",
-          "Escape": "cancel",
-          "a": "add",
-          "d": "delete",
-        ],
+        shortcut_map,
       )
     },
   )
