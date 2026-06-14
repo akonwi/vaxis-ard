@@ -88,6 +88,24 @@ func UiRadio(value, groupValue string, disabled bool, label string, onChanged fu
 	return ui.Radio[string]{Value: value, GroupValue: groupValue, Disabled: disabled, Label: label, OnChanged: onChanged}
 }
 
+type UiSegmentedItem struct {
+	Value    string
+	Label    string
+	Disabled bool
+}
+
+func UiSegmentedControl(value string, segments []UiSegmentedItem, disabled bool, onChanged func(ui.EventContext, string)) ui.Widget {
+	items := make([]ui.SegmentedItem[string], len(segments))
+	for i, s := range segments {
+		items[i] = ui.SegmentedItem[string]{Value: s.Value, Label: s.Label, Disabled: s.Disabled}
+	}
+	return ui.SegmentedControl[string]{Value: value, Segments: items, Disabled: disabled, OnChanged: onChanged}
+}
+
+func UiMakeSegmentedItem(value, label string, disabled bool) UiSegmentedItem {
+	return UiSegmentedItem{Value: value, Label: label, Disabled: disabled}
+}
+
 // ─── Stateful widget ──────────────────────────────────────────────────
 
 type uiStateful[T any] struct {

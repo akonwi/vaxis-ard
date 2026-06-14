@@ -246,6 +246,26 @@ fn radio(value: Str, group_value: Str, label: Str, on_changed: fn(EventContext, 
   )
 }
 
+// ── SegmentedControl ─────────────────────────────────────────────────
+
+extern type SegmentedItem = "ffi.UiSegmentedItem"
+
+extern fn _segmented_control(value: Str, segments: [SegmentedItem], disabled: Bool, on_changed: fn(EventContextHandle, Str)) Widget = "UiSegmentedControl"
+extern fn _segmented_item(value: Str, label: Str, disabled: Bool) SegmentedItem = "UiMakeSegmentedItem"
+
+fn segment(value: Str, label: Str) SegmentedItem {
+  _segmented_item(value, label, false)
+}
+
+fn segmented_control(value: Str, segments: [SegmentedItem], on_changed: fn(EventContext, Str)) Widget {
+  _segmented_control(
+    value, segments, false,
+    fn(ctx: EventContextHandle, next: Str) {
+      on_changed(EventContext{handle: ctx}, next)
+    },
+  )
+}
+
 // ── Divider ───────────────────────────────────────────────────────────
 
 extern fn _divider() Widget   = "UiDivider"
