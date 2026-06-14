@@ -65,6 +65,10 @@ func UiExpanded(child ui.Widget) ui.Widget {
 	return ui.Expanded(child)
 }
 
+func UiFlexible(flex int, child ui.Widget) ui.Widget {
+	return ui.FlexibleWidget{Flex: flex, Fit: ui.FlexFitLoose, Child: child}
+}
+
 func UiSizedBox(width, height int, child ui.Widget) ui.Widget {
 	return ui.SizedBox{Width: width, Height: height, Child: child}
 }

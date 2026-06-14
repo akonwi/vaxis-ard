@@ -57,6 +57,7 @@ extern fn _column(children: [Widget]) Widget   = "UiColumn"
 extern fn _center(child: Widget) Widget   = "UiCenter"
 extern fn _padding(all: Int, child: Widget) Widget   = "UiPadding"
 extern fn _expanded(child: Widget) Widget   = "UiExpanded"
+extern fn _flexible(flex: Int, child: Widget) Widget = "UiFlexible"
 extern fn _sized_box(width: Int, height: Int, child: Widget) Widget   = "UiSizedBox"
 
 fn row(children: [Widget]) Widget { _row(children) }
@@ -64,6 +65,7 @@ fn column(children: [Widget]) Widget { _column(children) }
 fn center(child: Widget) Widget { _center(child) }
 fn padding(all: Int, child: Widget) Widget { _padding(all, child) }
 fn expanded(child: Widget) Widget { _expanded(child) }
+fn flexible(flex: Int, child: Widget) Widget { _flexible(flex, child) }
 fn sized_box(width: Int, height: Int, child: Widget) Widget { _sized_box(width, height, child) }
 
 // ── Flex (advanced) ───────────────────────────────────────────────────
