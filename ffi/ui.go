@@ -275,6 +275,14 @@ func UiMakeOverlayEntry(child ui.Widget, modal bool, alignX, alignY int) UiOverl
 	return UiOverlayEntry{Child: child, Modal: modal, AlignX: alignX, AlignY: alignY}
 }
 
+func UiSelectionArea(child ui.Widget) ui.Widget {
+	return ui.SelectionArea{Child: child}
+}
+
+func UiSelectionContainer(child ui.Widget, disabled bool) ui.Widget {
+	return ui.SelectionContainer{Child: child, Disabled: disabled}
+}
+
 func UiModalBarrier(fg, bg, ulColor, ulStyle, attrs int, opacity int) ui.Widget {
 	return ui.ModalBarrier{Color: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs).Background, Opacity: uint8(opacity)}
 }

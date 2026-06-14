@@ -186,6 +186,21 @@ fn overlay_modal(child: Widget, modal_child: Widget) Widget {
   _overlay(child, [_overlay_entry(modal_child, true, 0, 0)])
 }
 
+// ── Selection ─────────────────────────────────────────────────────────
+
+extern fn _selection_area(child: Widget) Widget = "UiSelectionArea"
+extern fn _selection_container(child: Widget, disabled: Bool) Widget = "UiSelectionContainer"
+
+fn selection_area(child: Widget) Widget { _selection_area(child) }
+fn selection_container(child: Widget, disabled: Bool?) Widget {
+  mut d = false
+  match disabled {
+    v => { d = v },
+    _ => {},
+  }
+  _selection_container(child, d)
+}
+
 // ── ProgressBar ───────────────────────────────────────────────────────
 
 extern fn _progress_bar(value: Float, width: Int, filled_fg: Int, filled_bg: Int, filled_attrs: Int, empty_fg: Int, empty_bg: Int, empty_attrs: Int) Widget = "UiProgressBar"
