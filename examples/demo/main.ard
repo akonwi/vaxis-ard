@@ -116,7 +116,7 @@ fn controls_page(model: DemoState, state: ui::State<DemoState>) ui::Widget {
       }),
       ui::text("  "),
       ui::button("Notify", fn(ctx: ui::EventContext) {
-        ui::notify(ctx, "Demo", "Hello from Ard + vaxis/ui")
+        ui::notify(ctx, "", "Hello from Ard + vaxis/ui")
       }),
       ui::text("  "),
       ui::button("Dialog", fn(ctx: ui::EventContext) {
@@ -227,7 +227,7 @@ fn theme_page() ui::Widget {
     color_row("Black on white", 0, 7),
     ui::sized_box(80, 1, ui::text("")),
     ui::text("Styled borders:"),
-    ui::bordered_box(-1, -1, 0, ui::text("  Thin border  ")),
+    ui::bordered_box(7, 4, 0, ui::text("  White on blue border  ")),
     ui::sized_box(80, 1, ui::text("")),
     ui::decorated_box(7, 4, bold(), ui::text("  White on blue, bold  ")),
   ]))
@@ -307,7 +307,8 @@ fn root_widget() ui::Widget {
         ui::sized_box(80, 1, ui::text("")),
         build_footer(model.page),
       ])
-      ui::shortcuts(
+
+      let body = ui::shortcuts(
         ui::actions(ui::focus(content), [
           ui::action(demo_quit(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
             ui::quit(ctx)
@@ -328,6 +329,25 @@ fn root_widget() ui::Widget {
         ]),
         keyboard_shortcuts(),
       )
+
+      if model.dialog_open {
+        let dialog_content = ui::dialog(
+          "Demo Dialog",
+          ui::text("Focus stays inside this dialog. Press Escape or choose Close to dismiss it."),
+          [
+            ui::button("Close", fn(ctx: ui::EventContext) {
+              state.set(fn(mut s: DemoState) { s.dialog_open = false })
+            }),
+          ],
+          48,
+          fn(ctx: ui::EventContext) {
+            state.set(fn(mut s: DemoState) { s.dialog_open = false })
+          },
+        )
+        ui::overlay_modal(body, dialog_content)
+      } else {
+        body
+      }
     },
   )
 }
