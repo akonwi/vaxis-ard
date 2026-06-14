@@ -93,6 +93,19 @@ fn checkbox(checked: Bool, label: Str, disabled: Bool?, on_changed: fn(EventCont
   )
 }
 
+// ── Radio ─────────────────────────────────────────────────────────────
+
+extern fn _radio(value: Str, group_value: Str, disabled: Bool, label: Str, on_changed: fn(EventContextHandle, Str)) Widget = "UiRadio"
+
+fn radio(value: Str, group_value: Str, label: Str, on_changed: fn(EventContext, Str)) Widget {
+  _radio(
+    value, group_value, false, label,
+    fn(ctx: EventContextHandle, next: Str) {
+      on_changed(EventContext{handle: ctx}, next)
+    },
+  )
+}
+
 // ── Divider ───────────────────────────────────────────────────────────
 
 extern fn _divider() Widget   = "UiDivider"

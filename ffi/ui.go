@@ -70,6 +70,10 @@ func UiCheckbox(checked bool, disabled bool, label string, onChanged func(ui.Eve
 	return ui.Checkbox{Checked: checked, Disabled: disabled, Label: label, OnChanged: onChanged}
 }
 
+func UiRadio(value, groupValue string, disabled bool, label string, onChanged func(ui.EventContext, string)) ui.Widget {
+	return ui.Radio[string]{Value: value, GroupValue: groupValue, Disabled: disabled, Label: label, OnChanged: onChanged}
+}
+
 // ─── Stateful widget ──────────────────────────────────────────────────
 
 type uiStateful[T any] struct {
