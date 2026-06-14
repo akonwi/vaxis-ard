@@ -92,6 +92,8 @@ private extern fn raw_hide_cursor(vx: RawVaxis) Void = "HideCursor"
 
 private extern fn raw_read_key(vx: RawVaxis) Str!Str = "ReadEvent"
 
+private extern fn raw_post_event(vx: RawVaxis, event: Str) Void = "PostEvent"
+
 // ── Capabilities
 
 private extern fn raw_can_rgb(vx: RawVaxis) Bool = "CanRGB"
@@ -249,6 +251,45 @@ struct RGBColor {
 
 type Color = DefaultColor | IndexedColor | RGBColor
 
+fn color_params(c: Color) [Int] {
+  match c {
+    DefaultColor => [],
+    IndexedColor(it) => [it.value],
+    RGBColor(it) => [it.r, it.g, it.b],
+  }
+}
+
+fn index_for_rgb(r: Int, g: Int, b: Int) Int {
+  // 6x6x6 color cube, index 16..231
+  mut ri = 0
+  mut gi = 0
+  mut bi = 0
+  if r >= 8 { ri = 1 }
+  if r >= 40 { ri = 2 }
+  if r >= 75 { ri = 3 }
+  if r >= 115 { ri = 4 }
+  if r >= 155 { ri = 5 }
+  if g >= 8 { gi = 1 }
+  if g >= 40 { gi = 2 }
+  if g >= 75 { gi = 3 }
+  if g >= 115 { gi = 4 }
+  if g >= 155 { gi = 5 }
+  if b >= 8 { bi = 1 }
+  if b >= 40 { bi = 2 }
+  if b >= 75 { bi = 3 }
+  if b >= 115 { bi = 4 }
+  if b >= 155 { bi = 5 }
+  16 + ri * 36 + gi * 6 + bi
+}
+
+fn color_as_index(c: Color) Color {
+  match c {
+    DefaultColor => DefaultColor{},
+    IndexedColor(it) => IndexedColor{ value: it.value },
+    RGBColor(it) => IndexedColor{ value: index_for_rgb(it.r, it.g, it.b) },
+  }
+}
+
 let COLOR_DEFAULT: Color = DefaultColor{}
 let COLOR_BLACK: Color = IndexedColor{ value: 0 }
 let COLOR_RED: Color = IndexedColor{ value: 1 }
@@ -345,6 +386,8 @@ let EVENT_PASTE = 4
 struct ResizeEvent {
   cols: Int,
   rows: Int,
+  pixel_width: Int,
+  pixel_height: Int,
 }
 
 struct FocusInEvent {}
@@ -485,11 +528,11 @@ fn parse_event(raw: Str) Event {
   }
   if raw.starts_with("resize:") {
     let split = raw.split(":")
-    let cols_str = split.at(1)
-    let rows_str = split.at(2)
-    let cols = Int::from_str(cols_str).or(80)
-    let rows = Int::from_str(rows_str).or(24)
-    event = ResizeEvent{ cols: cols, rows: rows }
+    let cols = Int::from_str(split.at(1)).or(80)
+    let rows = Int::from_str(split.at(2)).or(24)
+    let pw = Int::from_str(split.at(3)).or(0)
+    let ph = Int::from_str(split.at(4)).or(0)
+    event = ResizeEvent{ cols: cols, rows: rows, pixel_width: pw, pixel_height: ph }
   }
   if raw.starts_with("mouse:") {
     let rest = raw.replace("mouse:", "")
@@ -660,6 +703,22 @@ fn cell_styled(grapheme: Str, style: Style) Cell {
   Cell{
     character: Character{ grapheme: grapheme, width: 1 },
     style: style,
+  }
+}
+
+// ── StyledString ───────────────────────────────────────────────────
+
+struct StyledString {
+  cells: [Cell],
+}
+
+impl StyledString {
+  fn len() Int {
+    mut total = 0
+    for cell in self.cells {
+      total = total + cell.character.width
+    }
+    total
   }
 }
 
@@ -1009,6 +1068,10 @@ impl App {
   fn mut read_event() Event!Str {
     let key = try raw_read_key(self.vx)
     Result::ok(parse_event(key))
+  }
+
+  fn mut post_event(event: Str) Void {
+    raw_post_event(self.vx, event)
   }
 
   fn root_window() Window {

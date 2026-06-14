@@ -300,7 +300,18 @@ func SetStyle(
 	vx.Window().SetStyle(col, row, style)
 }
 
-// ─── Events ───────────────────────────────────────────────────────────────
+// PostEvent injects a custom event string into the vaxis event loop.
+// The string will be returned verbatim by the next ReadEvent call.
+func PostEvent(vx *vaxis.Vaxis, event string) {
+	if vx != nil && event != "" {
+		vx.PostEvent(customEvent(event))
+	}
+}
+
+// customEvent is a string that implements the vaxis.Event interface.
+type customEvent string
+
+func (customEvent) isEvent() {}
 
 // ReadEvent reads the next event from vaxis and encodes it as a string:
 //
@@ -343,7 +354,7 @@ func ReadEvent(vx *vaxis.Vaxis) (string, error) {
 			}
 			return fmt.Sprintf("key:%d:%d:%s", int(ev.Modifiers), int(ev.EventType), normalized), nil
 		case vaxis.Resize:
-			return fmt.Sprintf("resize:%d:%d", ev.Cols, ev.Rows), nil
+			return fmt.Sprintf("resize:%d:%d:%d:%d", ev.Cols, ev.Rows, ev.XPixel, ev.YPixel), nil
 		case vaxis.Redraw:
 			return "redraw", nil
 		case vaxis.QuitEvent:
@@ -365,6 +376,8 @@ func ReadEvent(vx *vaxis.Vaxis) (string, error) {
 			return fmt.Sprintf("mouse:%d:%d:%d:%d:%d",
 				int(ev.Button), ev.Col, ev.Row,
 				int(ev.Modifiers), int(ev.EventType)), nil
+		case customEvent:
+			return string(ev), nil
 		}
 	}
 	return "quit", nil
