@@ -1,6 +1,7 @@
 package ffi
 
 import (
+	"context"
 	"fmt"
 	"time"
 	"unicode"
@@ -192,6 +193,12 @@ func ShowCursor(vx *vaxis.Vaxis, col, row int) {
 	}
 }
 
+func ShowCursorStyled(vx *vaxis.Vaxis, col, row, style int) {
+	if vx != nil {
+		vx.ShowCursor(col, row, vaxis.CursorStyle(style))
+	}
+}
+
 func HideCursor(vx *vaxis.Vaxis) {
 	if vx != nil {
 		vx.HideCursor()
@@ -352,6 +359,10 @@ func ReadEvent(vx *vaxis.Vaxis) (string, error) {
 				return "theme:dark", nil
 			}
 			return "theme:light", nil
+		case vaxis.Mouse:
+			return fmt.Sprintf("mouse:%d:%d:%d:%d:%d",
+				int(ev.Button), ev.Col, ev.Row,
+				int(ev.Modifiers), int(ev.EventType)), nil
 		}
 	}
 	return "quit", nil
@@ -467,6 +478,76 @@ func TextBackspace(text string) string {
 	}
 	return text[:len(text)-size]
 }
+
+// ─── P1: Mouse shape, clipboard pop, queries ─────────────────────────────
+
+func SetMouseShape(vx *vaxis.Vaxis, shape string) {
+	if vx != nil {
+		vx.SetMouseShape(vaxis.MouseShape(shape))
+	}
+}
+
+func ClipboardPop(vx *vaxis.Vaxis) (string, error) {
+	if vx == nil {
+		return "", nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return vx.ClipboardPop(ctx)
+}
+
+func NotifyWorkingDirectory(vx *vaxis.Vaxis, path string) {
+	if vx != nil {
+		vx.NotifyWorkingDirectory(path)
+	}
+}
+
+func SetAppID(vx *vaxis.Vaxis, id string) {
+	if vx != nil {
+		vx.SetAppID(id)
+	}
+}
+
+func QueryColor(vx *vaxis.Vaxis, index int) int {
+	if vx == nil {
+		return 0
+	}
+	c := vaxis.IndexColor(uint8(index))
+	result := vx.QueryColor(c)
+	if params := result.Params(); len(params) == 3 {
+		return int(params[0])<<16 | int(params[1])<<8 | int(params[2])
+	}
+	return 0
+}
+
+func QueryForeground(vx *vaxis.Vaxis) int {
+	if vx == nil {
+		return 0
+	}
+	result := vx.QueryForeground()
+	if params := result.Params(); len(params) == 3 {
+		return int(params[0])<<16 | int(params[1])<<8 | int(params[2])
+	}
+	return 0
+}
+
+func QueryBackground(vx *vaxis.Vaxis) int {
+	if vx == nil {
+		return 0
+	}
+	result := vx.QueryBackground()
+	if params := result.Params(); len(params) == 3 {
+		return int(params[0])<<16 | int(params[1])<<8 | int(params[2])
+	}
+	return 0
+}
+
+func CanReportColor(vx *vaxis.Vaxis) bool          { return vx != nil && vx.CanReportColor() }
+func CanReportForegroundColor(vx *vaxis.Vaxis) bool { return vx != nil && vx.CanReportForegroundColor() }
+func CanReportBackgroundColor(vx *vaxis.Vaxis) bool { return vx != nil && vx.CanReportBackgroundColor() }
+func CanSetAppID(vx *vaxis.Vaxis) bool              { return vx != nil && vx.CanSetAppID() }
+func CanExplicitWidth(vx *vaxis.Vaxis) bool         { return vx != nil && vx.CanExplicitWidth() }
+func CanInBandResize(vx *vaxis.Vaxis) bool          { return vx != nil && vx.CanInBandResize() }
 
 // ─── Style decoding (shared) ──────────────────────────────────────────────
 

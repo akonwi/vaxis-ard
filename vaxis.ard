@@ -82,6 +82,8 @@ extern fn raw_fill_region(
 
 extern fn raw_show_cursor(vx: RawVaxis, col: Int, row: Int) Void = "ShowCursor"
 
+extern fn raw_show_cursor_styled(vx: RawVaxis, col: Int, row: Int, style: Int) Void = "ShowCursorStyled"
+
 extern fn raw_hide_cursor(vx: RawVaxis) Void = "HideCursor"
 
 // ── Events (Go multiplexes stdin + signals, normalizes to strings)
@@ -115,6 +117,34 @@ extern fn raw_rendered_width(vx: RawVaxis, text: Str) Int = "RenderedWidth"
 extern fn raw_terminal_id(vx: RawVaxis) Str = "TerminalID"
 
 extern fn raw_text_backspace(text: Str) Str = "TextBackspace"
+
+// ── P1: Mouse, clipboard, queries
+
+extern fn raw_set_mouse_shape(vx: RawVaxis, shape: Str) Void = "SetMouseShape"
+
+extern fn raw_clipboard_pop(vx: RawVaxis) Str!Str = "ClipboardPop"
+
+extern fn raw_notify_working_directory(vx: RawVaxis, path: Str) Void = "NotifyWorkingDirectory"
+
+extern fn raw_set_app_id(vx: RawVaxis, id: Str) Void = "SetAppID"
+
+extern fn raw_query_color(vx: RawVaxis, index: Int) Int = "QueryColor"
+
+extern fn raw_query_foreground(vx: RawVaxis) Int = "QueryForeground"
+
+extern fn raw_query_background(vx: RawVaxis) Int = "QueryBackground"
+
+extern fn raw_can_report_color(vx: RawVaxis) Bool = "CanReportColor"
+
+extern fn raw_can_report_foreground_color(vx: RawVaxis) Bool = "CanReportForegroundColor"
+
+extern fn raw_can_report_background_color(vx: RawVaxis) Bool = "CanReportBackgroundColor"
+
+extern fn raw_can_set_app_id(vx: RawVaxis) Bool = "CanSetAppID"
+
+extern fn raw_can_explicit_width(vx: RawVaxis) Bool = "CanExplicitWidth"
+
+extern fn raw_can_in_band_resize(vx: RawVaxis) Bool = "CanInBandResize"
 
 // ── Style at position
 
@@ -317,7 +347,65 @@ struct ColorThemeEvent {
   dark: Bool,
 }
 
-type Event = KeyEvent | ResizeEvent | FocusInEvent | FocusOutEvent | PasteStartEvent | PasteEndEvent | RedrawEvent | QuitEvent | ColorThemeEvent
+struct MouseEvent {
+  button: Int,
+  col: Int,
+  row: Int,
+  modifiers: Int,
+  event_type: Int,
+}
+
+type Event = KeyEvent | ResizeEvent | FocusInEvent | FocusOutEvent | PasteStartEvent | PasteEndEvent | RedrawEvent | QuitEvent | ColorThemeEvent | MouseEvent
+
+// ── MouseShape ────────────────────────────────────────────────────────
+
+let MOUSE_SHAPE_DEFAULT = "default"
+let MOUSE_SHAPE_TEXT = "text"
+let MOUSE_SHAPE_POINTER = "pointer"
+let MOUSE_SHAPE_HELP = "help"
+let MOUSE_SHAPE_PROGRESS = "progress"
+let MOUSE_SHAPE_WAIT = "wait"
+let MOUSE_SHAPE_EW_RESIZE = "ew-resize"
+let MOUSE_SHAPE_NS_RESIZE = "ns-resize"
+let MOUSE_SHAPE_CELL = "cell"
+
+// ── MouseButton ───────────────────────────────────────────────────────
+
+let MOUSE_LEFT = 0
+let MOUSE_MIDDLE = 1
+let MOUSE_RIGHT = 2
+let MOUSE_NONE = 3
+let MOUSE_WHEEL_UP = 64
+let MOUSE_WHEEL_DOWN = 65
+let MOUSE_BACKWARD = 128
+let MOUSE_FORWARD = 129
+
+// ── CursorStyle ───────────────────────────────────────────────────────
+
+enum CursorStyle {
+  default,
+  block_blinking,
+  block,
+  underline_blinking,
+  underline,
+  beam_blinking,
+  beam,
+}
+
+impl CursorStyle {
+  // workaround for FFI
+  fn to_int() Int {
+    match self {
+      CursorStyle::default => 0,
+      CursorStyle::block_blinking => 1,
+      CursorStyle::block => 2,
+      CursorStyle::underline_blinking => 3,
+      CursorStyle::underline => 4,
+      CursorStyle::beam_blinking => 5,
+      CursorStyle::beam => 6,
+    }
+  }
+}
 
 // ─── Helpers (must be defined before use in impl blocks) ───────────────
 
@@ -341,14 +429,16 @@ fn style_attrs(s: Style) Int {
   attrs
 }
 
-fn style_ul_style(ul: UnderlineStyle) Int {
-  match ul {
-    UnderlineStyle::off => 0,
-    UnderlineStyle::single => 1,
-    UnderlineStyle::double => 2,
-    UnderlineStyle::curly => 3,
-    UnderlineStyle::dotted => 4,
-    UnderlineStyle::dashed => 5,
+impl UnderlineStyle {
+  fn to_int() Int {
+    match self {
+      UnderlineStyle::off => 0,
+      UnderlineStyle::single => 1,
+      UnderlineStyle::double => 2,
+      UnderlineStyle::curly => 3,
+      UnderlineStyle::dotted => 4,
+      UnderlineStyle::dashed => 5,
+    }
   }
 }
 
@@ -384,6 +474,16 @@ fn parse_event(raw: Str) Event {
     let cols = Int::from_str(cols_str).or(80)
     let rows = Int::from_str(rows_str).or(24)
     event = ResizeEvent{ cols: cols, rows: rows }
+  }
+  if raw.starts_with("mouse:") {
+    let rest = raw.replace("mouse:", "")
+    let parts = rest.split(":")
+    let btn = Int::from_str(parts.at(0)).or(0)
+    let col = Int::from_str(parts.at(1)).or(0)
+    let row = Int::from_str(parts.at(2)).or(0)
+    let mods = Int::from_str(parts.at(3)).or(0)
+    let etype = Int::from_str(parts.at(4)).or(0)
+    event = MouseEvent{ button: btn, col: col, row: row, modifiers: mods, event_type: etype }
   }
   event
 }
@@ -608,7 +708,7 @@ impl Window {
         color_to_int(s.fg),
         color_to_int(s.bg),
         color_to_int(s.ul_color),
-        style_ul_style(s.ul_style),
+        s.ul_style.to_int(),
         style_attrs(s),
       )
     }
@@ -617,7 +717,7 @@ impl Window {
   fn mut fill(cell: Cell) {
     let s = cell.style
     let attrs = style_attrs(s)
-    let ul = style_ul_style(s.ul_style)
+    let ul = s.ul_style.to_int()
     raw_fill_region(
       self.vx,
       self.col_offset,
@@ -641,6 +741,10 @@ impl Window {
     raw_show_cursor(self.vx, self.col_offset + col, self.row_offset + row)
   }
 
+  fn mut show_cursor_styled(col: Int, row: Int, style: CursorStyle) {
+    raw_show_cursor_styled(self.vx, self.col_offset + col, self.row_offset + row, style.to_int())
+  }
+
   fn mut write(col: Int, row: Int, text: Str, style: Style) {
     raw_write(
       self.vx,
@@ -650,7 +754,7 @@ impl Window {
       color_to_int(style.fg),
       color_to_int(style.bg),
       color_to_int(style.ul_color),
-      style_ul_style(style.ul_style),
+      style.ul_style.to_int(),
       style_attrs(style),
     )
   }
@@ -664,7 +768,7 @@ impl Window {
       color_to_int(style.fg),
       color_to_int(style.bg),
       color_to_int(style.ul_color),
-      style_ul_style(style.ul_style),
+      style.ul_style.to_int(),
       style_attrs(style),
     )
   }
@@ -683,7 +787,7 @@ impl Window {
         color_to_int(style.fg),
         color_to_int(style.bg),
         color_to_int(style.ul_color),
-        style_ul_style(style.ul_style),
+        style.ul_style.to_int(),
         style_attrs(style),
       )
     }
@@ -702,7 +806,7 @@ impl Window {
       fgs.push(color_to_int(s.fg))
       bgs.push(color_to_int(s.bg))
       uls.push(color_to_int(s.ul_color))
-      ul_styles.push(style_ul_style(s.ul_style))
+      ul_styles.push(s.ul_style.to_int())
       attrss.push(style_attrs(s))
     }
     let pos = raw_print(
@@ -729,7 +833,7 @@ impl Window {
       fgs.push(color_to_int(s.fg))
       bgs.push(color_to_int(s.bg))
       uls.push(color_to_int(s.ul_color))
-      ul_styles.push(style_ul_style(s.ul_style))
+      ul_styles.push(s.ul_style.to_int())
       attrss.push(style_attrs(s))
     }
     raw_println(
@@ -754,7 +858,7 @@ impl Window {
       fgs.push(color_to_int(s.fg))
       bgs.push(color_to_int(s.bg))
       uls.push(color_to_int(s.ul_color))
-      ul_styles.push(style_ul_style(s.ul_style))
+      ul_styles.push(s.ul_style.to_int())
       attrss.push(style_attrs(s))
     }
     raw_print_truncate(
@@ -779,7 +883,7 @@ impl Window {
       fgs.push(color_to_int(s.fg))
       bgs.push(color_to_int(s.bg))
       uls.push(color_to_int(s.ul_color))
-      ul_styles.push(style_ul_style(s.ul_style))
+      ul_styles.push(s.ul_style.to_int())
       attrss.push(style_attrs(s))
     }
     let pos = raw_wrap(
@@ -866,6 +970,10 @@ impl App {
     raw_show_cursor(self.vx, col, row)
   }
 
+  fn mut show_cursor_styled(col: Int, row: Int, style: CursorStyle) Void {
+    raw_show_cursor_styled(self.vx, col, row, style.to_int())
+  }
+
   fn mut read_key() Str!Str {
     let raw = try raw_read_key(self.vx)
     mut key = "redraw"
@@ -909,4 +1017,20 @@ impl App {
   fn rendered_width(text: Str) Int { raw_rendered_width(self.vx, text) }
   fn terminal_id() Str { raw_terminal_id(self.vx) }
   fn text_backspace(text: Str) Str { raw_text_backspace(text) }
+
+  // ── P1: Mouse, clipboard, queries ────────────────────────────────
+
+  fn mut set_mouse_shape(shape: Str) Void { raw_set_mouse_shape(self.vx, shape) }
+  fn mut clipboard_pop() Str!Str { raw_clipboard_pop(self.vx) }
+  fn mut notify_working_directory(path: Str) Void { raw_notify_working_directory(self.vx, path) }
+  fn mut set_app_id(id: Str) Void { raw_set_app_id(self.vx, id) }
+  fn query_color(index: Int) Int { raw_query_color(self.vx, index) }
+  fn query_foreground() Int { raw_query_foreground(self.vx) }
+  fn query_background() Int { raw_query_background(self.vx) }
+  fn can_report_color() Bool { raw_can_report_color(self.vx) }
+  fn can_report_foreground_color() Bool { raw_can_report_foreground_color(self.vx) }
+  fn can_report_background_color() Bool { raw_can_report_background_color(self.vx) }
+  fn can_set_app_id() Bool { raw_can_set_app_id(self.vx) }
+  fn can_explicit_width() Bool { raw_can_explicit_width(self.vx) }
+  fn can_in_band_resize() Bool { raw_can_in_band_resize(self.vx) }
 }
