@@ -486,9 +486,14 @@ fn lists_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
 
 fn table_page() ui::Widget {
   ui::column([
-    ui::styled_text("Table", -1, -1, bold()),
-    ui::text("Columns can size to content, take a fixed width, or share remaining space."),
-    ui::sized_box(80, 1, ui::text("")),
+    ui::rich_text(
+      [
+        ui::span("Table", bold()),
+        ui::span("\nColumns can size to content, take a fixed width, or share the remaining space proportionally."),
+      ],
+      soft_wrap: true,
+    ),
+    ui::sized_box(0, 1, ui::text("")),
     ui::table(
       [ui::table_column_intrinsic(), ui::table_column_flex(1), ui::table_column_fixed(8)],
       2, 1,
@@ -503,8 +508,11 @@ fn table_page() ui::Widget {
         ui::table_row([ui::text("deploy"), ui::text("blocked on approval"), ui::text("23")]),
       ],
     ),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::text("First column intrinsic, middle flexes, id column fixed at 8 cells."),
+    ui::sized_box(0, 1, ui::text("")),
+    ui::text(
+      "The first column is intrinsic, the middle column flexes, and the id column stays fixed at eight cells.",
+      soft_wrap: true,
+    ),
   ])
 }
 
