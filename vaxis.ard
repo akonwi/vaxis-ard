@@ -362,30 +362,144 @@ let KEY_BACKSPACE = "backspace"
 let KEY_REDRAW = "redraw"
 let KEY_QUIT = "q"
 
+// ── Modifier ──────────────────────────────────────────────────────────
+
+enum Modifier {
+  shift,
+  alt,
+  ctrl,
+  super,
+  hyper,
+  meta,
+  caps_lock,
+  num_lock,
+}
+
+impl Modifier {
+  fn to_bit() Int {
+    match self {
+      Modifier::shift => 1,
+      Modifier::alt => 2,
+      Modifier::ctrl => 4,
+      Modifier::super => 8,
+      Modifier::hyper => 16,
+      Modifier::meta => 32,
+      Modifier::caps_lock => 64,
+      Modifier::num_lock => 128,
+    }
+  }
+}
+
+fn unpack_modifiers(mask: Int) [Modifier] {
+  mut out: [Modifier] = []
+  mut m = mask
+  if (m % 2) == 1 { out.push(Modifier::shift) }
+  m = m / 2
+  if (m % 2) == 1 { out.push(Modifier::alt) }
+  m = m / 2
+  if (m % 2) == 1 { out.push(Modifier::ctrl) }
+  m = m / 2
+  if (m % 2) == 1 { out.push(Modifier::super) }
+  m = m / 2
+  if (m % 2) == 1 { out.push(Modifier::hyper) }
+  m = m / 2
+  if (m % 2) == 1 { out.push(Modifier::meta) }
+  m = m / 2
+  if (m % 2) == 1 { out.push(Modifier::caps_lock) }
+  m = m / 2
+  if (m % 2) == 1 { out.push(Modifier::num_lock) }
+  out
+}
+
+// ── EventType ─────────────────────────────────────────────────────────
+
+enum EventType {
+  press,
+  repeat,
+  release,
+  motion,
+  paste,
+}
+
+impl EventType {
+  fn to_int() Int {
+    match self {
+      EventType::press => 0,
+      EventType::repeat => 1,
+      EventType::release => 2,
+      EventType::motion => 3,
+      EventType::paste => 4,
+    }
+  }
+}
+
+fn event_type_from_int(v: Int) EventType {
+  if v == 1 { EventType::repeat }
+  else if v == 2 { EventType::release }
+  else if v == 3 { EventType::motion }
+  else if v == 4 { EventType::paste }
+  else { EventType::press }
+}
+
+// ── MouseButton ───────────────────────────────────────────────────────
+
+enum MouseButton {
+  left,
+  middle,
+  right,
+  none,
+  wheel_up,
+  wheel_down,
+  backward,
+  forward,
+}
+
+fn mouse_button_from_int(v: Int) MouseButton {
+  if v == 1 { MouseButton::middle }
+  else if v == 2 { MouseButton::right }
+  else if v == 3 { MouseButton::none }
+  else if v == 64 { MouseButton::wheel_up }
+  else if v == 65 { MouseButton::wheel_down }
+  else if v == 128 { MouseButton::backward }
+  else if v == 129 { MouseButton::forward }
+  else { MouseButton::left }
+}
+
+// ── MouseShape ────────────────────────────────────────────────────────
+
+enum MouseShape {
+  default,
+  text,
+  pointer,
+  help,
+  progress,
+  wait,
+  ew_resize,
+  ns_resize,
+  cell,
+}
+
+fn mouse_shape_to_str(shape: MouseShape) Str {
+  match shape {
+    MouseShape::default => "default",
+    MouseShape::text => "text",
+    MouseShape::pointer => "pointer",
+    MouseShape::help => "help",
+    MouseShape::progress => "progress",
+    MouseShape::wait => "wait",
+    MouseShape::ew_resize => "ew-resize",
+    MouseShape::ns_resize => "ns-resize",
+    MouseShape::cell => "cell",
+  }
+}
+
 // ── Events ─────────────────────────────────────────────────────────────
 
 struct KeyEvent {
   key: Str,
-  modifiers: Int,
-  event_type: Int,
+  modifiers: [Modifier],
+  event_type: EventType,
 }
-
-// Modifier bitmask (matching vaxis Go ModifierMask)
-let MOD_SHIFT = 1
-let MOD_ALT = 2
-let MOD_CTRL = 4
-let MOD_SUPER = 8
-let MOD_HYPER = 16
-let MOD_META = 32
-let MOD_CAPS_LOCK = 64
-let MOD_NUM_LOCK = 128
-
-// EventType (matching vaxis Go EventType)
-let EVENT_PRESS = 0
-let EVENT_REPEAT = 1
-let EVENT_RELEASE = 2
-let EVENT_MOTION = 3
-let EVENT_PASTE = 4
 
 struct ResizeEvent {
   cols: Int,
@@ -411,37 +525,14 @@ struct ColorThemeEvent {
 }
 
 struct MouseEvent {
-  button: Int,
+  button: MouseButton,
   col: Int,
   row: Int,
-  modifiers: Int,
-  event_type: Int,
+  modifiers: [Modifier],
+  event_type: EventType,
 }
 
 type Event = KeyEvent | ResizeEvent | FocusInEvent | FocusOutEvent | PasteStartEvent | PasteEndEvent | RedrawEvent | QuitEvent | ColorThemeEvent | MouseEvent
-
-// ── MouseShape ────────────────────────────────────────────────────────
-
-let MOUSE_SHAPE_DEFAULT = "default"
-let MOUSE_SHAPE_TEXT = "text"
-let MOUSE_SHAPE_POINTER = "pointer"
-let MOUSE_SHAPE_HELP = "help"
-let MOUSE_SHAPE_PROGRESS = "progress"
-let MOUSE_SHAPE_WAIT = "wait"
-let MOUSE_SHAPE_EW_RESIZE = "ew-resize"
-let MOUSE_SHAPE_NS_RESIZE = "ns-resize"
-let MOUSE_SHAPE_CELL = "cell"
-
-// ── MouseButton ───────────────────────────────────────────────────────
-
-let MOUSE_LEFT = 0
-let MOUSE_MIDDLE = 1
-let MOUSE_RIGHT = 2
-let MOUSE_NONE = 3
-let MOUSE_WHEEL_UP = 64
-let MOUSE_WHEEL_DOWN = 65
-let MOUSE_BACKWARD = 128
-let MOUSE_FORWARD = 129
 
 // ── CursorStyle ───────────────────────────────────────────────────────
 
@@ -521,7 +612,7 @@ impl UnderlineStyle {
 }
 
 fn parse_event(raw: Str) Event {
-  mut event: Event = KeyEvent{ key: raw, modifiers: 0, event_type: 0 }
+  mut event: Event = KeyEvent{ key: raw, modifiers: [], event_type: EventType::press }
   if raw == "redraw" { event = RedrawEvent{} }
   if raw == "quit" { event = QuitEvent{} }
   if raw == "focus:in" { event = FocusInEvent{} }
@@ -533,14 +624,12 @@ fn parse_event(raw: Str) Event {
   if raw.starts_with("key:") {
     let rest = raw.replace("key:", "")
     let parts = rest.split(":")
-    // Format: key:<modmask>:<eventtype>:<name>
-    // Backward compat: key:<name>
-    mut mods = 0
-    mut etype = 0
+    mut mods: [Modifier] = []
+    mut etype = EventType::press
     mut name = rest
     if parts.size() >= 3 {
-      mods = Int::from_str(parts.at(0)).or(0)
-      etype = Int::from_str(parts.at(1)).or(0)
+      mods = unpack_modifiers(Int::from_str(parts.at(0)).or(0))
+      etype = event_type_from_int(Int::from_str(parts.at(1)).or(0))
       name = parts.at(2)
     }
     event = KeyEvent{ key: name, modifiers: mods, event_type: etype }
@@ -556,11 +645,11 @@ fn parse_event(raw: Str) Event {
   if raw.starts_with("mouse:") {
     let rest = raw.replace("mouse:", "")
     let parts = rest.split(":")
-    let btn = Int::from_str(parts.at(0)).or(0)
+    let btn = mouse_button_from_int(Int::from_str(parts.at(0)).or(0))
     let col = Int::from_str(parts.at(1)).or(0)
     let row = Int::from_str(parts.at(2)).or(0)
-    let mods = Int::from_str(parts.at(3)).or(0)
-    let etype = Int::from_str(parts.at(4)).or(0)
+    let mods = unpack_modifiers(Int::from_str(parts.at(3)).or(0))
+    let etype = event_type_from_int(Int::from_str(parts.at(4)).or(0))
     event = MouseEvent{ button: btn, col: col, row: row, modifiers: mods, event_type: etype }
   }
   event
@@ -831,12 +920,11 @@ impl Window {
     raw_clear_region(self.vx, self.col_offset, self.row_offset, self.width, self.height)
   }
 
-  fn mut show_cursor(col: Int, row: Int) {
-    raw_show_cursor(self.vx, self.col_offset + col, self.row_offset + row)
-  }
-
-  fn mut show_cursor_styled(col: Int, row: Int, style: CursorStyle) {
-    raw_show_cursor_styled(self.vx, self.col_offset + col, self.row_offset + row, style.to_int())
+  fn mut show_cursor(col: Int, row: Int, style: CursorStyle?) {
+    match style {
+      s => raw_show_cursor_styled(self.vx, self.col_offset + col, self.row_offset + row, s.to_int()),
+      _ => raw_show_cursor(self.vx, self.col_offset + col, self.row_offset + row),
+    }
   }
 
   fn mut write(col: Int, row: Int, text: Str, style: Style) {
@@ -1061,12 +1149,11 @@ impl App {
     raw_hide_cursor(self.vx)
   }
 
-  fn mut show_cursor(col: Int, row: Int) Void {
-    raw_show_cursor(self.vx, col, row)
-  }
-
-  fn mut show_cursor_styled(col: Int, row: Int, style: CursorStyle) Void {
-    raw_show_cursor_styled(self.vx, col, row, style.to_int())
+  fn mut show_cursor(col: Int, row: Int, style: CursorStyle?) {
+    match style {
+      s => raw_show_cursor_styled(self.vx, col, row, s.to_int()),
+      _ => raw_show_cursor(self.vx, col, row),
+    }
   }
 
   fn mut read_key() Str!Str {
@@ -1090,12 +1177,12 @@ impl App {
     Result::ok(parse_event(key))
   }
 
-  fn mut post_event(event: Str) Void {
-    raw_post_event(self.vx, event)
-  }
-
-  fn mut post_event_blocking(event: Str) Void {
-    raw_post_event_blocking(self.vx, event)
+  fn mut post_event(event: Str, blocking: Bool?) {
+    if blocking.or(false) {
+      raw_post_event_blocking(self.vx, event)
+    } else {
+      raw_post_event(self.vx, event)
+    }
   }
 
   fn mut sync_func(callback: fn() Void) Void {
@@ -1127,13 +1214,13 @@ impl App {
 
   // ── P1: Mouse, clipboard, queries ────────────────────────────────
 
-  fn mut set_mouse_shape(shape: Str) Void { raw_set_mouse_shape(self.vx, shape) }
+  fn mut set_mouse_shape(shape: MouseShape) Void { raw_set_mouse_shape(self.vx, mouse_shape_to_str(shape)) }
   fn mut clipboard_pop() Str!Str { raw_clipboard_pop(self.vx) }
   fn mut notify_working_directory(path: Str) Void { raw_notify_working_directory(self.vx, path) }
   fn mut set_app_id(id: Str) Void { raw_set_app_id(self.vx, id) }
-  fn query_color(index: Int) Int { raw_query_color(self.vx, index) }
-  fn query_foreground() Int { raw_query_foreground(self.vx) }
-  fn query_background() Int { raw_query_background(self.vx) }
+  fn query_color(index: Int) Color { int_to_color(raw_query_color(self.vx, index)) }
+  fn query_foreground() Color { int_to_color(raw_query_foreground(self.vx)) }
+  fn query_background() Color { int_to_color(raw_query_background(self.vx)) }
   fn can_report_color() Bool { raw_can_report_color(self.vx) }
   fn can_report_foreground_color() Bool { raw_can_report_foreground_color(self.vx) }
   fn can_report_background_color() Bool { raw_can_report_background_color(self.vx) }
