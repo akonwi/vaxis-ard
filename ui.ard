@@ -450,12 +450,57 @@ extern fn _decorated_box(
   child: Widget,
 ) Widget = "UiDecoratedBox"
 
-fn decorated_box(fg: Int, bg: Int, attrs: Int, child: Widget) Widget {
-  _decorated_box(fg, bg, -1, 0, attrs, false, false, false, false, child)
+// TextAttrs bundles vaxis attribute-mask flags as typed Bool fields.
+// Used everywhere attrs cross the public API (span, styled_text,
+// decorated_box, bordered_box). Each field is nullable so callers can
+// opt into just the ones they need: `TextAttrs{bold: true}`,
+// `TextAttrs{bold: true, italic: true}`, etc. Auto-wrap of struct
+// fields means callers never write maybe::some(true).
+struct TextAttrs {
+  bold: Bool?,
+  dim: Bool?,
+  italic: Bool?,
+  blink: Bool?,
+  reverse: Bool?,
+  invisible: Bool?,
+  strikethrough: Bool?,
 }
 
-fn bordered_box(fg: Int, bg: Int, attrs: Int, child: Widget) Widget {
-  _decorated_box(fg, bg, -1, 0, attrs, true, true, true, true, child)
+// Map TextAttrs? to the vaxis attribute bitmask. Flags are
+// non-overlapping powers of two, so `+` is a correct OR (AGENTS.md).
+fn _attr_bits(attrs: TextAttrs?) Int {
+  mut bits = 0
+  match attrs {
+    a => {
+      if a.bold.or(false) { bits = bits + 1 }
+      if a.dim.or(false) { bits = bits + 2 }
+      if a.italic.or(false) { bits = bits + 4 }
+      if a.blink.or(false) { bits = bits + 8 }
+      if a.reverse.or(false) { bits = bits + 16 }
+      if a.invisible.or(false) { bits = bits + 32 }
+      if a.strikethrough.or(false) { bits = bits + 64 }
+    },
+    _ => {},
+  }
+  bits
+}
+
+fn decorated_box(
+  child: Widget,
+  fg: Int?,
+  bg: Int?,
+  attrs: TextAttrs?,
+) Widget {
+  _decorated_box(fg.or(-1), bg.or(-1), -1, 0, _attr_bits(attrs), false, false, false, false, child)
+}
+
+fn bordered_box(
+  child: Widget,
+  fg: Int?,
+  bg: Int?,
+  attrs: TextAttrs?,
+) Widget {
+  _decorated_box(fg.or(-1), bg.or(-1), -1, 0, _attr_bits(attrs), true, true, true, true, child)
 }
 
 // ── Align ─────────────────────────────────────────────────────────────
@@ -772,7 +817,7 @@ extern fn _span(
 //   on_pressed  — mouse/keyboard activation callback
 fn span(
   text: Str,
-  attrs: Int?,
+  attrs: TextAttrs?,
   fg: Int?,
   bg: Int?,
   underline: Bool?,
@@ -786,7 +831,7 @@ fn span(
   if underline.or(false) { ul_style = 1 }
   _span(
     text,
-    attrs.or(0),
+    _attr_bits(attrs),
     fg.or(-1),
     bg.or(-1),
     ul_style,
@@ -874,8 +919,13 @@ fn text(
   )
 }
 
-fn styled_text(value: Str, fg: Int, bg: Int, attrs: Int) Widget {
-  _styled_text(value, fg, bg, -1, 0, attrs)
+fn styled_text(
+  value: Str,
+  fg: Int?,
+  bg: Int?,
+  attrs: TextAttrs?,
+) Widget {
+  _styled_text(value, fg.or(-1), bg.or(-1), -1, 0, _attr_bits(attrs))
 }
 
 fn button(label: Str, on_pressed: fn(EventContext)) Widget {

@@ -37,10 +37,6 @@ fn demo_next() Str { "demo.next-page" }
 fn demo_prev() Str { "demo.previous-page" }
 fn demo_dialog() Str { "demo.toggle-dialog" }
 
-fn bold() Int { 1 }
-fn dim() Int { 2 }
-fn italic() Int { 4 }
-
 fn checkbox_label(checked: Bool) Str {
   if checked { "checked" } else { "unchecked" }
 }
@@ -60,8 +56,8 @@ fn home_page(ticks: Int) ui::Widget {
     [
       ui::rich_text(
         [
-          ui::span("Home", bold()),
-          ui::span("\nThis example is intentionally larger than the counter. It uses state, focus, buttons, shortcuts, rich text, wrapping text, alignment, themed borders, and runtime dispatch from a goroutine.", 0),
+          ui::span("Home", attrs: ui::TextAttrs{bold: true}),
+          ui::span("\nThis example is intentionally larger than the counter. It uses state, focus, buttons, shortcuts, rich text, wrapping text, alignment, themed borders, and runtime dispatch from a goroutine."),
         ],
         soft_wrap: true,
       ),
@@ -72,8 +68,8 @@ fn home_page(ticks: Int) ui::Widget {
       ),
       ui::rich_text(
         [
-          ui::span("ticks: ", 0),
-          ui::span(ticks.to_str(), bold()),
+          ui::span("ticks: "),
+          ui::span(ticks.to_str(), attrs: ui::TextAttrs{bold: true}),
         ],
         soft_wrap: false,
       ),
@@ -90,7 +86,7 @@ fn scroll_demo_lines() ui::Widget {
   while i <= 24 {
     lines.push(ui::rich_text(
       [
-        ui::span("row " + i.to_str(), bold()),
+        ui::span("row " + i.to_str(), attrs: ui::TextAttrs{bold: true}),
         ui::span("  scrollable content for the demo viewport"),
       ],
       soft_wrap: false,
@@ -125,12 +121,12 @@ fn text_page(theme: ui::Theme) ui::Widget {
     [
       ui::rich_text(
         [
-          ui::span("Text layout", bold()),
+          ui::span("Text layout", attrs: ui::TextAttrs{bold: true}),
           ui::span("\nDrag to select, double-click words, triple-click lines, then press Ctrl+C to copy."),
           ui::span("\nRichText spans can mix "),
-          ui::span("bold", bold()),
+          ui::span("bold", attrs: ui::TextAttrs{bold: true}),
           ui::span(", "),
-          ui::span("italic", italic()),
+          ui::span("italic", attrs: ui::TextAttrs{italic: true}),
           ui::span(", and normal text while sharing the same selection area."),
         ],
         soft_wrap: true,
@@ -162,9 +158,9 @@ fn text_page(theme: ui::Theme) ui::Widget {
       ),
       ui::rich_text(
         [
-          ui::span("Multiple selectable widgets: ", bold()),
+          ui::span("Multiple selectable widgets: ", attrs: ui::TextAttrs{bold: true}),
           ui::span("drag from this phrase "),
-          ui::span("through the next line", bold()),
+          ui::span("through the next line", attrs: ui::TextAttrs{bold: true}),
           ui::span(" to test cross-widget copy."),
         ],
         soft_wrap: true,
@@ -216,7 +212,7 @@ fn controls_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme
   ui::column([
     ui::rich_text(
       [
-        ui::span("Controls", bold()),
+        ui::span("Controls", attrs: ui::TextAttrs{bold: true}),
         ui::span("\nButtons are focusable. Use Tab/Shift+Tab and Enter, or click them with the mouse."),
       ],
       soft_wrap: true,
@@ -234,10 +230,11 @@ fn controls_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme
     ui::stack(
       [
         ui::sized_box(28, 1, ui::decorated_box(
-          -1, theme.surface, bold(),
           ui::text("Stack base"),
+          bg: theme.surface,
+          attrs: ui::TextAttrs{bold: true},
         )),
-        ui::positioned(18, 0, ui::styled_text("new", theme.accent_text, -1, bold())),
+        ui::positioned(18, 0, ui::styled_text("new", theme.accent_text, -1, attrs: ui::TextAttrs{bold: true})),
       ],
       alignment: ui::Alignment::top_left,
     ),
@@ -259,7 +256,7 @@ fn controls_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme
           state.set(fn(mut s: DemoState) { s.count = s.count - 1 })
         }),
         ui::sized_box(1, 1, ui::text("")),
-        ui::rich_text([ui::span("count: "), ui::span(model.count.to_str(), bold())]),
+        ui::rich_text([ui::span("count: "), ui::span(model.count.to_str(), attrs: ui::TextAttrs{bold: true})]),
         ui::sized_box(1, 1, ui::text("")),
         ui::button("+", fn(ctx: ui::EventContext) {
           state.set(fn(mut s: DemoState) { s.count = s.count + 1 })
@@ -293,7 +290,7 @@ fn controls_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme
           },
         ),
         ui::sized_box(2, 1, ui::text("")),
-        ui::rich_text([ui::span("checkbox: "), ui::span(checkbox_label(model.done), bold())]),
+        ui::rich_text([ui::span("checkbox: "), ui::span(checkbox_label(model.done), attrs: ui::TextAttrs{bold: true})]),
         ui::sized_box(2, 1, ui::text("")),
         ui::checkbox(
           checked: false,
@@ -320,7 +317,7 @@ fn controls_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme
           disabled: true,
         ),
         ui::sized_box(2, 1, ui::text("")),
-        ui::rich_text([ui::span("radio: "), ui::span(model.mode, bold())]),
+        ui::rich_text([ui::span("radio: "), ui::span(model.mode, attrs: ui::TextAttrs{bold: true})]),
       ],
       cross_align: ui::CrossAlign::center,
     ),
@@ -347,7 +344,7 @@ fn list_demo_row(theme: ui::Theme, i: Int) ui::Widget {
     color = theme.warning_text
   }
   ui::rich_text([
-    ui::span(pad_left(i.to_str(), 4), bold()),
+    ui::span(pad_left(i.to_str(), 4), attrs: ui::TextAttrs{bold: true}),
     ui::span("  "),
     ui::span("deploy target " + (100 + i).to_str()),
     ui::span("  "),
@@ -380,7 +377,7 @@ fn lists_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
   ui::column([
     ui::rich_text(
       [
-        ui::span("Lists", bold()),
+        ui::span("Lists", attrs: ui::TextAttrs{bold: true}),
         ui::span("  mixed slivers, lazy rows, and follow-output logs"),
       ],
       soft_wrap: true,
@@ -399,7 +396,7 @@ fn lists_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
       ),
       ui::list_tile(
         title: ui::text("Checks passing"),
-        leading: ui::styled_text("✓", theme.success_text, -1, 0),
+        leading: ui::styled_text("✓", fg: theme.success_text),
         trailing: ui::text("12/12"),
         on_pressed: fn(ctx: ui::EventContext) {
           ui::notify(ctx, "List tile", "Checks passing")
@@ -422,8 +419,10 @@ fn lists_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
             soft_wrap: true,
           )),
           ui::sliver_pinned_header(ui::decorated_box(
-            theme.foreground, theme.surface, bold(),
             ui::text(" #  target             status"),
+            fg: theme.foreground,
+            bg: theme.surface,
+            attrs: ui::TextAttrs{bold: true},
           )),
           ui::sliver_list_builder(
             count: 2000,
@@ -435,7 +434,7 @@ fn lists_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
           ),
           ui::sliver_to_box(ui::rich_text(
             [
-              ui::span("Footer sliver", bold()),
+              ui::span("Footer sliver", attrs: ui::TextAttrs{bold: true}),
               ui::span("\nTrack clicks page the same viewport as Page Up and Page Down. Drag the thumb for proportional scrolling."),
             ],
             soft_wrap: true,
@@ -462,7 +461,7 @@ fn lists_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
       },
     ),
     ui::sized_box(0, 1, ui::text("")),
-    ui::styled_text("Variable-height messages", -1, -1, bold()),
+    ui::styled_text("Variable-height messages", -1, -1, attrs: ui::TextAttrs{bold: true}),
     ui::sized_box(72, 2, ui::scrollbar(
       ui::custom_scroll_view(
         ui::scroll_controller(),
@@ -488,7 +487,7 @@ fn table_page() ui::Widget {
   ui::column([
     ui::rich_text(
       [
-        ui::span("Table", bold()),
+        ui::span("Table", attrs: ui::TextAttrs{bold: true}),
         ui::span("\nColumns can size to content, take a fixed width, or share the remaining space proportionally."),
       ],
       soft_wrap: true,
@@ -499,9 +498,9 @@ fn table_page() ui::Widget {
       2, 1,
       [
         ui::table_row([
-          ui::styled_text("job", -1, -1, bold()),
-          ui::styled_text("status", -1, -1, bold()),
-          ui::styled_text("id", -1, -1, bold()),
+          ui::styled_text("job", -1, -1, attrs: ui::TextAttrs{bold: true}),
+          ui::styled_text("status", -1, -1, attrs: ui::TextAttrs{bold: true}),
+          ui::styled_text("id", -1, -1, attrs: ui::TextAttrs{bold: true}),
         ]),
         ui::table_row([ui::text("build"), ui::text("running tests"), ui::text("1024")]),
         ui::table_row([ui::text("lint"), ui::text("waiting for worker"), ui::text("7")]),
@@ -519,12 +518,12 @@ fn table_page() ui::Widget {
 // ─── Theme page ───────────────────────────────────────────────────────
 
 fn color_row(label: Str, fg: Int, bg: Int) ui::Widget {
-  ui::styled_text("  " + label, fg, bg, 0)
+  ui::styled_text("  " + label, fg: fg, bg: bg)
 }
 
 fn theme_page() ui::Widget {
   ui::scroll_view(ui::column([
-    ui::styled_text("Theme colors", -1, -1, bold()),
+    ui::styled_text("Theme colors", -1, -1, attrs: ui::TextAttrs{bold: true}),
     ui::text("Styled text with color combinations:"),
     ui::sized_box(80, 1, ui::text("")),
     color_row("Default fg/bg", -1, -1),
@@ -542,9 +541,9 @@ fn theme_page() ui::Widget {
     color_row("Black on white", 0, 7),
     ui::sized_box(80, 1, ui::text("")),
     ui::text("Styled borders:"),
-    ui::bordered_box(7, 4, 0, ui::text("  White on blue border  ")),
+    ui::bordered_box(ui::text("  White on blue border  "), fg: 7, bg: 4),
     ui::sized_box(80, 1, ui::text("")),
-    ui::decorated_box(7, 4, bold(), ui::text("  White on blue, bold  ")),
+    ui::decorated_box(ui::text("  White on blue, bold  "), fg: 7, bg: 4, attrs: ui::TextAttrs{bold: true}),
   ]))
 }
 
@@ -594,8 +593,8 @@ fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Wi
   }
   ui::column([
     ui::rich_text([
-      ui::span("Vaxis UI demo", bold()),
-      ui::span("  —  Alt+K commands, n/p pages, Tab focus, q quit", 0),
+      ui::span("Vaxis UI demo", attrs: ui::TextAttrs{bold: true}),
+      ui::span("  —  Alt+K commands, n/p pages, Tab focus, q quit"),
     ], false),
     ui::row(tabs, ui::MainAlign::center),
   ])
@@ -606,9 +605,9 @@ fn build_footer(page: Int) ui::Widget {
   ui::row(
     [ui::rich_text(
       [
-        ui::span("page ", 0),
-        ui::span((page + 1).to_str(), bold()),
-        ui::span(" / " + total.to_str() + "  " + page_slug(page), 0),
+        ui::span("page "),
+        ui::span((page + 1).to_str(), attrs: ui::TextAttrs{bold: true}),
+        ui::span(" / " + total.to_str() + "  " + page_slug(page)),
       ],
       soft_wrap: false,
     )],
@@ -663,7 +662,7 @@ fn root_widget() ui::Widget {
         ui::sized_box(80, 1, ui::text("")),
         build_footer(model.page),
       ]))
-      let content = ui::decorated_box(theme.foreground, theme.background, 0, inner)
+      let content = ui::decorated_box(inner, fg: theme.foreground, bg: theme.background)
 
       let body = ui::shortcuts(
         ui::actions(ui::focus(content), [
