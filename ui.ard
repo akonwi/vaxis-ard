@@ -802,8 +802,25 @@ fn text_area(
 
 // ── Scroll ───────────────────────────────────────────────────────────
 
-extern fn _scroll_view(child: Widget) Widget = "UiScrollView"
-extern fn _scrollbar(axis: Int, child: Widget) Widget = "UiScrollbar"
+// scroll_view and scrollbar accept an optional ScrollAxis. Defaults to
+// vertical (matches vaxis ScrollVertical zero value).
+
+enum ScrollAxis {
+  vertical,
+  horizontal,
+}
+
+impl ScrollAxis {
+  fn to_int() Int {
+    match self {
+      ScrollAxis::vertical => 0,
+      ScrollAxis::horizontal => 1,
+    }
+  }
+}
+
+extern fn _scroll_view(child: Widget, axis: Int) Widget = "UiScrollView"
+extern fn _scrollbar(child: Widget, axis: Int) Widget = "UiScrollbar"
 
 extern type ScrollPaneController = "*ui.ScrollPaneController"
 
@@ -812,12 +829,13 @@ extern fn _scroll_pane(controller: ScrollPaneController, child: Widget) Widget =
 extern fn _scroll_pane_scroll_by(controller: ScrollPaneController, cols: Int, rows: Int) Bool = "UiScrollPaneScrollBy"
 extern fn _scroll_pane_scroll_to(controller: ScrollPaneController, col: Int, row: Int) Bool = "UiScrollPaneScrollTo"
 
-fn scroll_view(child: Widget) Widget { _scroll_view(child) }
+fn scroll_view(child: Widget, axis: ScrollAxis?) Widget {
+  _scroll_view(child, axis.or(ScrollAxis::vertical).to_int())
+}
 
-let SCROLL_VERTICAL = 0
-let SCROLL_HORIZONTAL = 1
-
-fn scrollbar(axis: Int, child: Widget) Widget { _scrollbar(axis, child) }
+fn scrollbar(child: Widget, axis: ScrollAxis?) Widget {
+  _scrollbar(child, axis.or(ScrollAxis::vertical).to_int())
+}
 
 fn scroll_pane_controller() ScrollPaneController { _scroll_pane_controller() }
 

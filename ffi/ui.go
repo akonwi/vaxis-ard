@@ -414,11 +414,11 @@ func UiMakeSpan(text string, fg, bg, attrs int) UiTextSpan {
 
 // ─── Scroll ───────────────────────────────────────────────────────────
 
-func UiScrollView(child ui.Widget) ui.Widget {
-	return ui.ScrollView{Child: child}
+func UiScrollView(child ui.Widget, axis int) ui.Widget {
+	return ui.ScrollView{Axis: ui.ScrollAxis(axis), Child: child}
 }
 
-func UiScrollbar(axis int, child ui.Widget) ui.Widget {
+func UiScrollbar(child ui.Widget, axis int) ui.Widget {
 	return ui.Scrollbar{Axis: ui.ScrollAxis(axis), Child: child}
 }
 
