@@ -29,14 +29,6 @@ func (i uiStringIntent) IntentType() ui.IntentType { return ui.IntentType(i) }
 
 // ─── Layout widgets ───────────────────────────────────────────────────
 
-func UiRow(children []ui.Widget) ui.Widget {
-	return ui.Row(children...)
-}
-
-func UiColumn(children []ui.Widget) ui.Widget {
-	return ui.Flex{Axis: ui.Vertical, CrossAxisAlignment: ui.CrossAxisStretch, Children: children}
-}
-
 func UiFlex(axis, mainAxisSize, mainAxisAlignment, crossAxisAlignment int, children []ui.Widget) ui.Widget {
 	return ui.Flex{
 		Axis:              ui.Axis(axis),

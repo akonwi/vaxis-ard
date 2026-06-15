@@ -262,19 +262,19 @@ fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Wi
     })))
     i = i + 1
   }
-  ui::column_stretch([
+  ui::column([
     ui::rich_text([
       ui::span("Vaxis UI demo", bold()),
       ui::span("  —  Alt+K commands, n/p pages, Tab focus, q quit", 0),
     ], false),
-    ui::row(tabs),
+    ui::row(tabs, ui::MainAlign::center),
   ])
 }
 
 fn build_footer(page: Int) ui::Widget {
   let total = page_count()
   let label = "page " + (page + 1).to_str() + " / " + total.to_str()
-  ui::row_end([ui::styled_text(label, -1, -1, dim())])
+  ui::row([ui::styled_text(label, -1, -1, dim())], ui::MainAlign::end)
 }
 
 // ─── Page router ──────────────────────────────────────────────────────
@@ -304,7 +304,7 @@ fn root_widget() ui::Widget {
     build: fn(ctx: ui::BuildContext, state: ui::State<DemoState>) ui::Widget {
       let model = state.value()
       let theme = ui::must_have_theme(ctx)
-      let inner = ui::padding(1, ui::column_stretch([
+      let inner = ui::padding(1, ui::column([
         build_header(model.page, state, theme),
         ui::sized_box(80, 1, ui::text("")),
         build_page(model, state, theme),

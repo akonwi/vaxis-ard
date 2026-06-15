@@ -276,55 +276,138 @@ fn build_theme(
 
 // ── Layout widgets ────────────────────────────────────────────────────
 
-extern fn _row(children: [Widget]) Widget   = "UiRow"
-extern fn _column(children: [Widget]) Widget   = "UiColumn"
 extern fn _center(child: Widget) Widget   = "UiCenter"
 extern fn _padding(all: Int, child: Widget) Widget   = "UiPadding"
 extern fn _expanded(child: Widget) Widget   = "UiExpanded"
 extern fn _flexible(flex: Int, child: Widget) Widget = "UiFlexible"
 extern fn _sized_box(width: Int, height: Int, child: Widget) Widget   = "UiSizedBox"
 
-fn row(children: [Widget]) Widget { _row(children) }
-fn column(children: [Widget]) Widget { _column(children) }
 fn center(child: Widget) Widget { _center(child) }
 fn padding(all: Int, child: Widget) Widget { _padding(all, child) }
 fn expanded(child: Widget) Widget { _expanded(child) }
 fn flexible(flex: Int, child: Widget) Widget { _flexible(flex, child) }
 fn sized_box(width: Int, height: Int, child: Widget) Widget { _sized_box(width, height, child) }
 
-// ── Flex (advanced) ───────────────────────────────────────────────────
+// ── Flex ──────────────────────────────────────────────────────────────
+//
+// row / column / flex take optional layout knobs as typed enums.
+// Defaults match vaxis zero values, except `column` defaults to
+// CrossAlign::stretch (TUI columns almost always want stretched children).
+
+enum Axis {
+  horizontal,
+  vertical,
+}
+
+enum MainSize {
+  max,
+  min,
+}
+
+enum MainAlign {
+  start,
+  end,
+  center,
+  between,
+  around,
+  evenly,
+}
+
+enum CrossAlign {
+  center,
+  start,
+  end,
+  stretch,
+}
+
+impl Axis {
+  fn to_int() Int {
+    match self {
+      Axis::horizontal => 0,
+      Axis::vertical => 1,
+    }
+  }
+}
+
+impl MainSize {
+  fn to_int() Int {
+    match self {
+      MainSize::max => 0,
+      MainSize::min => 1,
+    }
+  }
+}
+
+impl MainAlign {
+  fn to_int() Int {
+    match self {
+      MainAlign::start => 0,
+      MainAlign::end => 1,
+      MainAlign::center => 2,
+      MainAlign::between => 3,
+      MainAlign::around => 4,
+      MainAlign::evenly => 5,
+    }
+  }
+}
+
+impl CrossAlign {
+  fn to_int() Int {
+    match self {
+      CrossAlign::center => 0,
+      CrossAlign::start => 1,
+      CrossAlign::end => 2,
+      CrossAlign::stretch => 3,
+    }
+  }
+}
 
 extern fn _flex(axis: Int, main_size: Int, main_align: Int, cross_align: Int, children: [Widget]) Widget = "UiFlex"
 
-let AXIS_HORIZONTAL = 0
-let AXIS_VERTICAL = 1
-let MAIN_SIZE_MIN = 0
-let MAIN_SIZE_MAX = 1
-let MAIN_ALIGN_START = 0
-let MAIN_ALIGN_END = 1
-let MAIN_ALIGN_CENTER = 2
-let MAIN_ALIGN_BETWEEN = 3
-let MAIN_ALIGN_AROUND = 4
-let MAIN_ALIGN_EVENLY = 5
-let CROSS_ALIGN_CENTER = 0
-let CROSS_ALIGN_START = 1
-let CROSS_ALIGN_END = 2
-let CROSS_ALIGN_STRETCH = 3
-
-fn flex(axis: Int, children: [Widget]) Widget {
-  _flex(axis, MAIN_SIZE_MAX, MAIN_ALIGN_START, CROSS_ALIGN_CENTER, children)
+fn row(
+  children: [Widget],
+  main_align: MainAlign?,
+  cross_align: CrossAlign?,
+  main_size: MainSize?,
+) Widget {
+  _flex(
+    Axis::horizontal.to_int(),
+    main_size.or(MainSize::max).to_int(),
+    main_align.or(MainAlign::start).to_int(),
+    cross_align.or(CrossAlign::center).to_int(),
+    children,
+  )
 }
 
-fn flex_stretch(axis: Int, children: [Widget]) Widget {
-  _flex(axis, MAIN_SIZE_MAX, MAIN_ALIGN_START, CROSS_ALIGN_STRETCH, children)
+fn column(
+  children: [Widget],
+  main_align: MainAlign?,
+  cross_align: CrossAlign?,
+  main_size: MainSize?,
+) Widget {
+  _flex(
+    Axis::vertical.to_int(),
+    main_size.or(MainSize::max).to_int(),
+    main_align.or(MainAlign::start).to_int(),
+    cross_align.or(CrossAlign::stretch).to_int(),
+    children,
+  )
 }
 
-fn row_end(children: [Widget]) Widget {
-  _flex(AXIS_HORIZONTAL, MAIN_SIZE_MAX, MAIN_ALIGN_END, CROSS_ALIGN_START, children)
-}
-
-fn column_stretch(children: [Widget]) Widget {
-  _flex(AXIS_VERTICAL, MAIN_SIZE_MAX, MAIN_ALIGN_START, CROSS_ALIGN_STRETCH, children)
+fn flex(
+  axis: Axis,
+  children: [Widget],
+  main_align: MainAlign?,
+  cross_align: CrossAlign?,
+  main_size: MainSize?,
+) Widget {
+  _flex(
+    axis.to_int(),
+    main_size.or(MainSize::max).to_int(),
+    main_align.or(MainAlign::start).to_int(),
+    cross_align.or(CrossAlign::center).to_int(),
+    children,
+  )
 }
 
 // ── Positioned ────────────────────────────────────────────────────────

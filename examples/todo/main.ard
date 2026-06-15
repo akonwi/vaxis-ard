@@ -50,7 +50,7 @@ fn todo_row(todo: Todo, index: Int, selected: Int) ui::Widget {
   let title = ui::styled_text(todo.title, fg: -1, bg: -1, attrs: attrs)
   let spacer = ui::sized_box(width: 1, height: 1, child: ui::text(""))
   ui::flex(
-    axis: ui::AXIS_HORIZONTAL,
+    axis: ui::Axis::horizontal,
     children: [
       arrow,
       spacer,
