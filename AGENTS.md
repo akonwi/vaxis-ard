@@ -300,7 +300,7 @@ spec. Anything subtle should be confirmed with `ard-expert`.
 
 - Go: `git.sr.ht/~rockorager/vaxis` v0.16.0
 - Ard: `>= 0.19.2`
-- Go target requires Go ≥1.25
+- Go target requires Go ≥1.26
 
 ## Reference
 

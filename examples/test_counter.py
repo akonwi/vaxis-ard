@@ -12,9 +12,8 @@ import termios
 import time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-BIN = os.path.join(ROOT, "main")
+BIN = os.path.join(ROOT, "counter")
 ARD_CMD = shlex.split(os.environ.get("ARD", "ard"))
-
 
 class Screen:
     def __init__(self, rows=24, cols=80):
@@ -61,7 +60,7 @@ class Screen:
                 j += 1
             if j >= len(text):
                 return j
-            body = text[i + 1 : j]
+            body = text[i + 1:j]
             final = text[j]
             self._csi(body, final)
             return j + 1
@@ -93,10 +92,10 @@ class Screen:
             self.col = 0
 
 
+
+
 def build():
-    subprocess.run(
-        [*ARD_CMD, "build", "--out", "main", "main.ard"], cwd=ROOT, check=True
-    )
+    subprocess.run([*ARD_CMD, "build", "--out", "counter", "counter.ard"], cwd=ROOT, check=True)
 
 
 def spawn():
@@ -135,6 +134,9 @@ def read_for(fd, screen=None, seconds=0.15):
 
 
 def respond_to_terminal_queries(fd, data):
+    # Vaxis asks a real terminal a few capability questions during startup.
+    # A raw PTY has no terminal emulator on the other side, so answer the
+    # minimal queries needed for Vaxis to finish initialization and render.
     responses = []
     if b"\x1b[6n" in data:
         responses.append(b"\x1b[1;1R")
@@ -142,15 +144,11 @@ def respond_to_terminal_queries(fd, data):
         responses.append(b"\x1b[?1;0c")
     if b"\x1b[=c" in data:
         responses.append(b"\x1b[>0;0;0c")
-    # vaxis/ui enables CSIu (kitty keyboard) by default; respond so it
-    # doesn't hang waiting for the terminal to ack.
-    if b"\x1b[?u" in data or b"\x1b[?1u" in data:
-        responses.append(b"\x1b[?1u")
     for response in responses:
         os.write(fd, response)
 
 
-def wait_for_screen(fd, screen, needle, timeout=3.0):
+def wait_for_screen(fd, screen, needle, timeout=2.0):
     deadline = time.time() + timeout
     raw = ""
     while time.time() < deadline:
@@ -158,9 +156,7 @@ def wait_for_screen(fd, screen, needle, timeout=3.0):
         rendered = screen.text()
         if needle in rendered:
             return rendered
-    raise AssertionError(
-        f"did not see {needle!r}; screen:\n{screen.text()}\nraw tail:\n{raw[-2000:]}"
-    )
+    raise AssertionError(f"did not see {needle!r}; screen:\n{screen.text()}\nraw tail:\n{raw[-2000:]}")
 
 
 def send(fd, text):
@@ -172,42 +168,23 @@ def main():
     pid, fd = spawn()
     screen = Screen()
     try:
-        # Initial render: four todos, first selected
-        rendered = wait_for_screen(fd, screen, "Wire project Go FFI")
-        assert "> [x] Wire project Go FFI" in rendered, f"first todo not selected+checked:\n{rendered}"
-        assert "Done: 2 / 4" in rendered, f"done count wrong:\n{rendered}"
+        wait_for_screen(fd, screen, "Count: 0")
 
-        # Navigate down twice with j
-        send(fd, "j")
-        time.sleep(0.1)
-        send(fd, "j")
-        rendered = wait_for_screen(fd, screen, "Try a Vaxis todo list")
-        assert "> [ ] Try a Vaxis todo list" in rendered, (
-            f"third todo not selected after jj:\n{rendered}"
-        )
+        send(fd, "+")
+        wait_for_screen(fd, screen, "Count: 1")
 
-        # Toggle with Enter
-        send(fd, "\r")
-        rendered = wait_for_screen(fd, screen, "Done: 3 / 4")
-        assert "> [x] Try a Vaxis todo list" in rendered, (
-            f"third todo not toggled on:\n{rendered}"
-        )
+        send(fd, "+")
+        wait_for_screen(fd, screen, "Count: 2")
 
-        # Navigate up with k
-        send(fd, "k")
-        rendered = wait_for_screen(fd, screen, "Build a Vaxis counter")
-        assert "> [x] Build a Vaxis counter" in rendered, (
-            f"second todo not selected after k:\n{rendered}"
-        )
+        send(fd, "r")
+        wait_for_screen(fd, screen, "Count: 0")
 
-        # Toggle off with space
-        send(fd, " ")
-        rendered = wait_for_screen(fd, screen, "Done: 2 / 4")
-        assert "> [ ] Build a Vaxis counter" in rendered, (
-            f"second todo not toggled off:\n{rendered}"
-        )
+        send(fd, "-")
+        wait_for_screen(fd, screen, "Count: -1")
 
-        # Quit
+        send(fd, "r")
+        wait_for_screen(fd, screen, "Count: 0")
+
         send(fd, "q")
         deadline = time.time() + 2.0
         status = None
@@ -219,10 +196,10 @@ def main():
             read_for(fd, screen, 0.05)
         if status is None:
             send(fd, "\x03")
-            raise AssertionError("todo did not exit after q")
+            raise AssertionError("counter did not exit after q")
         if status != 0:
-            raise AssertionError(f"todo exited with status {status}")
-        print("todo smoke test passed")
+            raise AssertionError(f"counter exited with status {status}")
+        print("counter smoke test passed")
     finally:
         try:
             os.close(fd)

@@ -14,7 +14,7 @@ import termios
 import time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-BIN = os.path.join(ROOT, "main")
+BIN = os.path.join(ROOT, "demo")
 ARD_CMD = shlex.split(os.environ.get("ARD", "ard"))
 
 
@@ -100,7 +100,7 @@ class Screen:
 # ── Test helpers ───────────────────────────────────────────────────────
 
 def build():
-    subprocess.run(ARD_CMD + ["build", "main.ard"], cwd=ROOT, check=True)
+    subprocess.run(ARD_CMD + ["build", "--out", "demo", "demo.ard"], cwd=ROOT, check=True)
 
 
 def spawn(binary, rows=24, cols=80):

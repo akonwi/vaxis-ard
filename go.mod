@@ -1,6 +1,6 @@
 module vaxis-ard
 
-go 1.25.0
+go 1.26
 
 require git.sr.ht/~rockorager/vaxis v0.16.0
 

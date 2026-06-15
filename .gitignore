@@ -1,5 +1,9 @@
 ard-out
 ard-out/
-examples/*/counter
-examples/*/main
 /main
+
+# example binaries
+/examples/counter
+/examples/demo
+/examples/todo
+/examples/tic_tac_toe

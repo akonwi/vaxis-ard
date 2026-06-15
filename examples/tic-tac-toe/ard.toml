@@ -1,6 +1,0 @@
-name = "vaxis_ard"
-ard = ">= 0.19.2"
-target = "go"
-
-[dependencies]
-vaxis = { path = "../.." }
