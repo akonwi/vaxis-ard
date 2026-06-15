@@ -547,9 +547,15 @@ fn root_widget() ui::Widget {
 
       if model.dialog_open {
         let dialog_content = ui::dialog(
-          "Demo Dialog",
-          ui::text("Focus stays inside this dialog. Press Escape or choose Close to dismiss it."),
+          "Demo dialog",
+          ui::text(
+            "Focus stays inside this dialog. Press Escape or choose Close to dismiss it.",
+            soft_wrap: true,
+          ),
           [
+            ui::button("Notify", fn(ctx: ui::EventContext) {
+              ui::notify(ctx, "Dialog", "Action from dialog")
+            }),
             ui::button("Close", fn(ctx: ui::EventContext) {
               state.set(fn(mut s: DemoState) { s.dialog_open = false })
             }),
