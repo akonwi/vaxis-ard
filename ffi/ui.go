@@ -766,6 +766,44 @@ func UiThemeSelection(t UiTheme) int          { return int(t.Theme.Selection) }
 func UiThemeBorder(t UiTheme) int             { return int(t.Theme.Border) }
 func UiThemeMode(t UiTheme) int              { return int(t.Theme.Mode) }
 
+// UiThemePaletteScale returns the 11 generated tones (Tone50 .. Tone950)
+// for one color family of the theme's palette. The family argument is
+// indexed: 0 neutral, 1 red, 2 green, 3 yellow, 4 blue, 5 magenta, 6 cyan.
+func UiThemePaletteScale(t UiTheme, family int) []int {
+	var scale ui.ColorScale
+	switch family {
+	case 0:
+		scale = t.Theme.Palette.Neutral
+	case 1:
+		scale = t.Theme.Palette.Red
+	case 2:
+		scale = t.Theme.Palette.Green
+	case 3:
+		scale = t.Theme.Palette.Yellow
+	case 4:
+		scale = t.Theme.Palette.Blue
+	case 5:
+		scale = t.Theme.Palette.Magenta
+	case 6:
+		scale = t.Theme.Palette.Cyan
+	default:
+		return nil
+	}
+	return []int{
+		int(scale.Tone50),
+		int(scale.Tone100),
+		int(scale.Tone200),
+		int(scale.Tone300),
+		int(scale.Tone400),
+		int(scale.Tone500),
+		int(scale.Tone600),
+		int(scale.Tone700),
+		int(scale.Tone800),
+		int(scale.Tone900),
+		int(scale.Tone950),
+	}
+}
+
 // ThemeSet helpers
 func UiThemeLight() UiTheme {
 	return UiTheme{Theme: ui.DefaultThemeSet().Light}

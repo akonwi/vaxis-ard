@@ -61,6 +61,20 @@ fn copy(ctx: EventContext, text: Str) { _copy(ctx.handle, text) }
 
 // Theme mirrors the semantic colors from vaxis/ui.Theme.
 // Use theme_default() to get the built-in dark theme, then mutate fields.
+// Palette is the generated color scale a Theme is derived from. Each
+// family is a 11-element list of tone ints (Tone50..Tone950). Palette
+// is read-only — vaxis regenerates it from base colors, so writing it
+// back through _theme_to_handle has no effect.
+struct Palette {
+  neutral: [Int],
+  red: [Int],
+  green: [Int],
+  yellow: [Int],
+  blue: [Int],
+  magenta: [Int],
+  cyan: [Int],
+}
+
 struct Theme {
   background: Int,
   foreground: Int,
@@ -85,6 +99,7 @@ struct Theme {
   selection: Int,
   border: Int,
   mode: Int,
+  palette: Palette,
 }
 
 // Private Go FFI — used only to read/write the Go Theme struct.
@@ -137,6 +152,7 @@ extern fn _theme_disabled_foreground(t: ThemeHandle) Int = "UiThemeDisabledForeg
 extern fn _theme_selection(t: ThemeHandle) Int = "UiThemeSelection"
 extern fn _theme_border(t: ThemeHandle) Int = "UiThemeBorder"
 extern fn _theme_mode(t: ThemeHandle) Int = "UiThemeMode"
+extern fn _theme_palette_scale(t: ThemeHandle, family: Int) [Int] = "UiThemePaletteScale"
 extern fn _theme_light() ThemeHandle = "UiThemeLight"
 extern fn _theme_dark() ThemeHandle = "UiThemeDark"
 extern fn _must_have_theme(ctx: BuildContextHandle) ThemeHandle = "UiMustHaveTheme"
@@ -152,6 +168,15 @@ extern fn _run_with_theme_set(root: Widget, ts: ThemeSetHandle) Void = "UiRunWit
 
 // Read a Go ThemeHandle into an Ard Theme struct.
 fn _theme_from_handle(h: ThemeHandle) Theme {
+  let palette = Palette{
+    neutral: _theme_palette_scale(h, 0),
+    red:     _theme_palette_scale(h, 1),
+    green:   _theme_palette_scale(h, 2),
+    yellow:  _theme_palette_scale(h, 3),
+    blue:    _theme_palette_scale(h, 4),
+    magenta: _theme_palette_scale(h, 5),
+    cyan:    _theme_palette_scale(h, 6),
+  }
   Theme{
     background: _theme_background(h),
     foreground: _theme_foreground(h),
@@ -176,6 +201,7 @@ fn _theme_from_handle(h: ThemeHandle) Theme {
     selection: _theme_selection(h),
     border: _theme_border(h),
     mode: _theme_mode(h),
+    palette: palette,
   }
 }
 

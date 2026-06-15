@@ -49,6 +49,14 @@ fn pad_left(s: Str, width: Int) Str {
   result
 }
 
+fn pad_right(s: Str, width: Int) Str {
+  mut result = s
+  while result.size() < width {
+    result = result + " "
+  }
+  result
+}
+
 // ─── Home page ────────────────────────────────────────────────────────
 
 fn home_page(ticks: Int) ui::Widget {
@@ -517,34 +525,123 @@ fn table_page() ui::Widget {
 
 // ─── Theme page ───────────────────────────────────────────────────────
 
-fn color_row(label: Str, fg: Int, bg: Int) ui::Widget {
-  ui::styled_text("  " + label, fg: fg, bg: bg)
+fn theme_swatch_span(name: Str, bg: Int, fg: Int) ui::TextSpan {
+  ui::span(" " + pad_right(name, 24) + " ", fg: fg, bg: bg)
 }
 
-fn theme_page() ui::Widget {
-  ui::scroll_view(ui::column([
-    ui::styled_text("Theme colors", -1, -1, attrs: ui::TextAttrs{bold: true}),
-    ui::text("Styled text with color combinations:"),
-    ui::sized_box(80, 1, ui::text("")),
-    color_row("Default fg/bg", -1, -1),
-    color_row("Red on default", 1, -1),
-    color_row("Green on default", 2, -1),
-    color_row("Yellow on default", 3, -1),
-    color_row("Blue on default", 4, -1),
-    color_row("Magenta on default", 5, -1),
-    color_row("Cyan on default", 6, -1),
-    color_row("White on default", 7, -1),
-    ui::sized_box(80, 1, ui::text("")),
-    color_row("Default on black", -1, 0),
-    color_row("White on blue", 7, 4),
-    color_row("Black on yellow", 0, 3),
-    color_row("Black on white", 0, 7),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::text("Styled borders:"),
-    ui::bordered_box(ui::text("  White on blue border  "), fg: 7, bg: 4),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::decorated_box(ui::text("  White on blue, bold  "), fg: 7, bg: 4, attrs: ui::TextAttrs{bold: true}),
-  ]))
+fn theme_text_span(name: Str, fg: Int) ui::TextSpan {
+  ui::span(" " + pad_right(name, 24) + " ", fg: fg)
+}
+
+fn theme_swatch_row(spans: [ui::TextSpan]) ui::Widget {
+  mut row: [ui::TextSpan] = [ui::span("    ")]
+  mut i = 0
+  while i < spans.size() {
+    if i > 0 { row.push(ui::span("  ")) }
+    row.push(spans.at(i))
+    i = i + 1
+  }
+  ui::rich_text(row)
+}
+
+fn theme_group(name: Str, children: [ui::Widget]) ui::Widget {
+  mut group: [ui::Widget] = [ui::rich_text([ui::span("  "), ui::span(name, attrs: ui::TextAttrs{bold: true})])]
+  mut i = 0
+  while i < children.size() {
+    group.push(children.at(i))
+    i = i + 1
+  }
+  ui::column(group, cross_align: ui::CrossAlign::start)
+}
+
+fn palette_scale(name: Str, tones: [Int]) ui::Widget {
+  mut spans: [ui::TextSpan] = [ui::span(pad_right(name, 9))]
+  mut i = 0
+  while i < tones.size() {
+    spans.push(ui::span("  ", bg: tones.at(i)))
+    i = i + 1
+  }
+  ui::rich_text(spans)
+}
+
+fn theme_page(theme: ui::Theme) ui::Widget {
+  ui::column(
+    [
+      ui::rich_text(
+        [
+          ui::span("Theme", attrs: ui::TextAttrs{bold: true}),
+          ui::span("\nSemantic colors are generated from the palette, then widgets derive their styles from these roles."),
+        ],
+        soft_wrap: true,
+      ),
+      ui::sized_box(0, 1, ui::text("")),
+      ui::rich_text([ui::span("Semantic colors", attrs: ui::TextAttrs{bold: true})]),
+      theme_group("base", [
+        theme_swatch_row([
+          theme_swatch_span("Theme.Background", theme.background, theme.foreground),
+          theme_text_span("Theme.Foreground", theme.foreground),
+          theme_swatch_span("Theme.Border", theme.border, theme.background),
+        ]),
+      ]),
+      theme_group("surface", [
+        theme_swatch_row([
+          theme_swatch_span("Theme.Surface", theme.surface, theme.foreground),
+          theme_swatch_span("Theme.SurfaceRaised", theme.surface_raised, theme.foreground),
+        ]),
+        theme_swatch_row([
+          theme_swatch_span("Theme.SurfaceHovered", theme.surface_hovered, theme.foreground),
+          theme_swatch_span("Theme.SurfacePressed", theme.surface_pressed, theme.foreground),
+        ]),
+      ]),
+      theme_group("primary and accent", [
+        theme_swatch_row([
+          theme_swatch_span("Theme.Primary", theme.primary, theme.foreground),
+          theme_text_span("Theme.PrimaryText", theme.primary_text),
+        ]),
+        theme_swatch_row([
+          theme_swatch_span("Theme.PrimaryHovered", theme.primary_hovered, theme.foreground),
+          theme_swatch_span("Theme.PrimaryPressed", theme.primary_pressed, theme.foreground),
+        ]),
+        theme_swatch_row([
+          theme_swatch_span("Theme.Accent", theme.accent, theme.foreground),
+          theme_text_span("Theme.AccentText", theme.accent_text),
+        ]),
+      ]),
+      theme_group("state", [
+        theme_swatch_row([
+          theme_swatch_span("Theme.Success", theme.success, theme.foreground),
+          theme_text_span("Theme.SuccessText", theme.success_text),
+        ]),
+        theme_swatch_row([
+          theme_swatch_span("Theme.Warning", theme.warning, theme.foreground),
+          theme_text_span("Theme.WarningText", theme.warning_text),
+        ]),
+        theme_swatch_row([
+          theme_swatch_span("Theme.Danger", theme.danger, theme.foreground),
+          theme_text_span("Theme.DangerText", theme.danger_text),
+        ]),
+      ]),
+      theme_group("text and selection", [
+        theme_swatch_row([
+          theme_text_span("Theme.MutedForeground", theme.muted_foreground),
+          theme_text_span("Theme.DisabledForeground", theme.disabled_foreground),
+        ]),
+        theme_swatch_row([
+          theme_swatch_span("Theme.Selection", theme.selection, theme.foreground),
+        ]),
+      ]),
+      ui::sized_box(0, 1, ui::text("")),
+      ui::rich_text([ui::span("Palette tones", attrs: ui::TextAttrs{bold: true})]),
+      palette_scale("neutral", theme.palette.neutral),
+      palette_scale("red",     theme.palette.red),
+      palette_scale("green",   theme.palette.green),
+      palette_scale("yellow",  theme.palette.yellow),
+      palette_scale("blue",    theme.palette.blue),
+      palette_scale("magenta", theme.palette.magenta),
+      palette_scale("cyan",    theme.palette.cyan),
+    ],
+    cross_align: ui::CrossAlign::start,
+  )
 }
 
 // ─── Header & Footer ──────────────────────────────────────────────────
@@ -624,7 +721,7 @@ fn build_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
     2 => controls_page(model, state, theme),
     3 => lists_page(model, state, theme),
     4 => table_page(),
-    5 => theme_page(),
+    5 => theme_page(theme),
     _ => home_page(model.ticks),
   }
 }
