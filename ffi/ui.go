@@ -630,13 +630,30 @@ func UiThemeWithMode(t UiTheme, mode int) UiTheme {
 	return t
 }
 
-// Theme field getters
-func UiThemePrimary(t UiTheme) int        { return int(t.Theme.Primary) }
-func UiThemePrimaryHovered(t UiTheme) int { return int(t.Theme.PrimaryHovered) }
-func UiThemeBackground(t UiTheme) int     { return int(t.Theme.Background) }
-func UiThemeForeground(t UiTheme) int     { return int(t.Theme.Foreground) }
-func UiThemeSurface(t UiTheme) int        { return int(t.Theme.Surface) }
-func UiThemeBorder(t UiTheme) int         { return int(t.Theme.Border) }
+// Theme field getters (all 22 semantic colors)
+func UiThemeBackground(t UiTheme) int         { return int(t.Theme.Background) }
+func UiThemeForeground(t UiTheme) int         { return int(t.Theme.Foreground) }
+func UiThemeSurface(t UiTheme) int            { return int(t.Theme.Surface) }
+func UiThemeSurfaceRaised(t UiTheme) int      { return int(t.Theme.SurfaceRaised) }
+func UiThemeSurfaceHovered(t UiTheme) int     { return int(t.Theme.SurfaceHovered) }
+func UiThemeSurfacePressed(t UiTheme) int     { return int(t.Theme.SurfacePressed) }
+func UiThemePrimary(t UiTheme) int            { return int(t.Theme.Primary) }
+func UiThemePrimaryText(t UiTheme) int        { return int(t.Theme.PrimaryText) }
+func UiThemePrimaryHovered(t UiTheme) int     { return int(t.Theme.PrimaryHovered) }
+func UiThemePrimaryPressed(t UiTheme) int     { return int(t.Theme.PrimaryPressed) }
+func UiThemeAccent(t UiTheme) int             { return int(t.Theme.Accent) }
+func UiThemeAccentText(t UiTheme) int         { return int(t.Theme.AccentText) }
+func UiThemeSuccess(t UiTheme) int            { return int(t.Theme.Success) }
+func UiThemeSuccessText(t UiTheme) int        { return int(t.Theme.SuccessText) }
+func UiThemeWarning(t UiTheme) int            { return int(t.Theme.Warning) }
+func UiThemeWarningText(t UiTheme) int        { return int(t.Theme.WarningText) }
+func UiThemeDanger(t UiTheme) int             { return int(t.Theme.Danger) }
+func UiThemeDangerText(t UiTheme) int         { return int(t.Theme.DangerText) }
+func UiThemeMutedForeground(t UiTheme) int    { return int(t.Theme.MutedForeground) }
+func UiThemeDisabledForeground(t UiTheme) int  { return int(t.Theme.DisabledForeground) }
+func UiThemeSelection(t UiTheme) int          { return int(t.Theme.Selection) }
+func UiThemeBorder(t UiTheme) int             { return int(t.Theme.Border) }
+func UiThemeMode(t UiTheme) int              { return int(t.Theme.Mode) }
 
 // ─── Animation helpers ───────────────────────────────────────────────
 

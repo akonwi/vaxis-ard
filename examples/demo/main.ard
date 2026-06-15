@@ -258,7 +258,8 @@ fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Wi
     }
     mut tab_theme = theme
     if i == page {
-      tab_theme = ui::theme_with_surface_hovered(ui::theme_with_surface(theme, ui::theme_primary(theme)), ui::theme_primary_hovered(theme))
+      tab_theme.surface = theme.primary
+      tab_theme.surface_hovered = theme.primary_hovered
     }
     tabs.push(ui::provider_theme(tab_theme, ui::button(page_label(i, page), fn(ctx: ui::EventContext) {
       state.set(fn(mut s: DemoState) { s.page = i })

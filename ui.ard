@@ -56,76 +56,160 @@ fn copy(ctx: EventContext, text: Str) { _copy(ctx.handle, text) }
 
 // ── Theme system ──────────────────────────────────────────────────────
 
-extern type Theme = "ffi.UiTheme"
+// Theme mirrors the semantic colors from vaxis/ui.Theme.
+// Use theme_default() to get the built-in dark theme, then mutate fields.
+struct Theme {
+  background: Int,
+  foreground: Int,
+  surface: Int,
+  surface_raised: Int,
+  surface_hovered: Int,
+  surface_pressed: Int,
+  primary: Int,
+  primary_text: Int,
+  primary_hovered: Int,
+  primary_pressed: Int,
+  accent: Int,
+  accent_text: Int,
+  success: Int,
+  success_text: Int,
+  warning: Int,
+  warning_text: Int,
+  danger: Int,
+  danger_text: Int,
+  muted_foreground: Int,
+  disabled_foreground: Int,
+  selection: Int,
+  border: Int,
+  mode: Int,
+}
 
-extern fn _theme_default() Theme = "UiThemeDefault"
-extern fn _theme_with_background(t: Theme, color: Int) Theme = "UiThemeWithBackground"
-extern fn _theme_with_foreground(t: Theme, color: Int) Theme = "UiThemeWithForeground"
-extern fn _theme_with_surface(t: Theme, color: Int) Theme = "UiThemeWithSurface"
-extern fn _theme_with_surface_raised(t: Theme, color: Int) Theme = "UiThemeWithSurfaceRaised"
-extern fn _theme_with_surface_hovered(t: Theme, color: Int) Theme = "UiThemeWithSurfaceHovered"
-extern fn _theme_with_surface_pressed(t: Theme, color: Int) Theme = "UiThemeWithSurfacePressed"
-extern fn _theme_with_primary(t: Theme, color: Int) Theme = "UiThemeWithPrimary"
-extern fn _theme_with_primary_text(t: Theme, color: Int) Theme = "UiThemeWithPrimaryText"
-extern fn _theme_with_primary_hovered(t: Theme, color: Int) Theme = "UiThemeWithPrimaryHovered"
-extern fn _theme_with_primary_pressed(t: Theme, color: Int) Theme = "UiThemeWithPrimaryPressed"
-extern fn _theme_with_accent(t: Theme, color: Int) Theme = "UiThemeWithAccent"
-extern fn _theme_with_accent_text(t: Theme, color: Int) Theme = "UiThemeWithAccentText"
-extern fn _theme_with_success(t: Theme, color: Int) Theme = "UiThemeWithSuccess"
-extern fn _theme_with_success_text(t: Theme, color: Int) Theme = "UiThemeWithSuccessText"
-extern fn _theme_with_warning(t: Theme, color: Int) Theme = "UiThemeWithWarning"
-extern fn _theme_with_warning_text(t: Theme, color: Int) Theme = "UiThemeWithWarningText"
-extern fn _theme_with_danger(t: Theme, color: Int) Theme = "UiThemeWithDanger"
-extern fn _theme_with_danger_text(t: Theme, color: Int) Theme = "UiThemeWithDangerText"
-extern fn _theme_with_muted_foreground(t: Theme, color: Int) Theme = "UiThemeWithMutedForeground"
-extern fn _theme_with_disabled_foreground(t: Theme, color: Int) Theme = "UiThemeWithDisabledForeground"
-extern fn _theme_with_selection(t: Theme, color: Int) Theme = "UiThemeWithSelection"
-extern fn _theme_with_border(t: Theme, color: Int) Theme = "UiThemeWithBorder"
-extern fn _theme_with_mode(t: Theme, mode: Int) Theme = "UiThemeWithMode"
-extern fn _theme_primary(t: Theme) Int = "UiThemePrimary"
-extern fn _theme_primary_hovered(t: Theme) Int = "UiThemePrimaryHovered"
-extern fn _theme_background(t: Theme) Int = "UiThemeBackground"
-extern fn _theme_foreground(t: Theme) Int = "UiThemeForeground"
-extern fn _theme_surface(t: Theme) Int = "UiThemeSurface"
-extern fn _theme_border(t: Theme) Int = "UiThemeBorder"
-extern fn _must_have_theme(ctx: BuildContextHandle) Theme = "UiMustHaveTheme"
-extern fn _provider_theme(theme: Theme, child: Widget) Widget = "UiProviderTheme"
-extern fn _run_with_theme(root: Widget, theme: Theme) Void = "UiRunWithTheme"
+// Private Go FFI — used only to read/write the Go Theme struct.
+extern type ThemeHandle = "ffi.UiTheme"
 
-fn theme_default() Theme { _theme_default() }
-fn theme_with_background(t: Theme, color: Int) Theme { _theme_with_background(t, color) }
-fn theme_with_foreground(t: Theme, color: Int) Theme { _theme_with_foreground(t, color) }
-fn theme_with_surface(t: Theme, color: Int) Theme { _theme_with_surface(t, color) }
-fn theme_with_surface_raised(t: Theme, color: Int) Theme { _theme_with_surface_raised(t, color) }
-fn theme_with_surface_hovered(t: Theme, color: Int) Theme { _theme_with_surface_hovered(t, color) }
-fn theme_with_surface_pressed(t: Theme, color: Int) Theme { _theme_with_surface_pressed(t, color) }
-fn theme_with_primary(t: Theme, color: Int) Theme { _theme_with_primary(t, color) }
-fn theme_with_primary_text(t: Theme, color: Int) Theme { _theme_with_primary_text(t, color) }
-fn theme_with_primary_hovered(t: Theme, color: Int) Theme { _theme_with_primary_hovered(t, color) }
-fn theme_with_primary_pressed(t: Theme, color: Int) Theme { _theme_with_primary_pressed(t, color) }
-fn theme_with_accent(t: Theme, color: Int) Theme { _theme_with_accent(t, color) }
-fn theme_with_accent_text(t: Theme, color: Int) Theme { _theme_with_accent_text(t, color) }
-fn theme_with_success(t: Theme, color: Int) Theme { _theme_with_success(t, color) }
-fn theme_with_success_text(t: Theme, color: Int) Theme { _theme_with_success_text(t, color) }
-fn theme_with_warning(t: Theme, color: Int) Theme { _theme_with_warning(t, color) }
-fn theme_with_warning_text(t: Theme, color: Int) Theme { _theme_with_warning_text(t, color) }
-fn theme_with_danger(t: Theme, color: Int) Theme { _theme_with_danger(t, color) }
-fn theme_with_danger_text(t: Theme, color: Int) Theme { _theme_with_danger_text(t, color) }
-fn theme_with_muted_foreground(t: Theme, color: Int) Theme { _theme_with_muted_foreground(t, color) }
-fn theme_with_disabled_foreground(t: Theme, color: Int) Theme { _theme_with_disabled_foreground(t, color) }
-fn theme_with_selection(t: Theme, color: Int) Theme { _theme_with_selection(t, color) }
-fn theme_with_border(t: Theme, color: Int) Theme { _theme_with_border(t, color) }
-fn theme_with_mode(t: Theme, mode: Int) Theme { _theme_with_mode(t, mode) }
-fn theme_primary(t: Theme) Int { _theme_primary(t) }
-fn theme_primary_hovered(t: Theme) Int { _theme_primary_hovered(t) }
-fn theme_background(t: Theme) Int { _theme_background(t) }
-fn theme_foreground(t: Theme) Int { _theme_foreground(t) }
-fn theme_surface(t: Theme) Int { _theme_surface(t) }
-fn theme_border(t: Theme) Int { _theme_border(t) }
-fn must_have_theme(ctx: BuildContext) Theme { _must_have_theme(ctx.handle) }
-fn provider_theme(theme: Theme, child: Widget) Widget { _provider_theme(theme, child) }
+extern fn _theme_default() ThemeHandle = "UiThemeDefault"
+extern fn _theme_with_background(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithBackground"
+extern fn _theme_with_foreground(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithForeground"
+extern fn _theme_with_surface(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSurface"
+extern fn _theme_with_surface_raised(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSurfaceRaised"
+extern fn _theme_with_surface_hovered(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSurfaceHovered"
+extern fn _theme_with_surface_pressed(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSurfacePressed"
+extern fn _theme_with_primary(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithPrimary"
+extern fn _theme_with_primary_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithPrimaryText"
+extern fn _theme_with_primary_hovered(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithPrimaryHovered"
+extern fn _theme_with_primary_pressed(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithPrimaryPressed"
+extern fn _theme_with_accent(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithAccent"
+extern fn _theme_with_accent_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithAccentText"
+extern fn _theme_with_success(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSuccess"
+extern fn _theme_with_success_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSuccessText"
+extern fn _theme_with_warning(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithWarning"
+extern fn _theme_with_warning_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithWarningText"
+extern fn _theme_with_danger(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithDanger"
+extern fn _theme_with_danger_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithDangerText"
+extern fn _theme_with_muted_foreground(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithMutedForeground"
+extern fn _theme_with_disabled_foreground(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithDisabledForeground"
+extern fn _theme_with_selection(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSelection"
+extern fn _theme_with_border(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithBorder"
+extern fn _theme_with_mode(t: ThemeHandle, mode: Int) ThemeHandle = "UiThemeWithMode"
+extern fn _theme_background(t: ThemeHandle) Int = "UiThemeBackground"
+extern fn _theme_foreground(t: ThemeHandle) Int = "UiThemeForeground"
+extern fn _theme_surface(t: ThemeHandle) Int = "UiThemeSurface"
+extern fn _theme_surface_raised(t: ThemeHandle) Int = "UiThemeSurfaceRaised"
+extern fn _theme_surface_hovered(t: ThemeHandle) Int = "UiThemeSurfaceHovered"
+extern fn _theme_surface_pressed(t: ThemeHandle) Int = "UiThemeSurfacePressed"
+extern fn _theme_primary(t: ThemeHandle) Int = "UiThemePrimary"
+extern fn _theme_primary_text(t: ThemeHandle) Int = "UiThemePrimaryText"
+extern fn _theme_primary_hovered(t: ThemeHandle) Int = "UiThemePrimaryHovered"
+extern fn _theme_primary_pressed(t: ThemeHandle) Int = "UiThemePrimaryPressed"
+extern fn _theme_accent(t: ThemeHandle) Int = "UiThemeAccent"
+extern fn _theme_accent_text(t: ThemeHandle) Int = "UiThemeAccentText"
+extern fn _theme_success(t: ThemeHandle) Int = "UiThemeSuccess"
+extern fn _theme_success_text(t: ThemeHandle) Int = "UiThemeSuccessText"
+extern fn _theme_warning(t: ThemeHandle) Int = "UiThemeWarning"
+extern fn _theme_warning_text(t: ThemeHandle) Int = "UiThemeWarningText"
+extern fn _theme_danger(t: ThemeHandle) Int = "UiThemeDanger"
+extern fn _theme_danger_text(t: ThemeHandle) Int = "UiThemeDangerText"
+extern fn _theme_muted_foreground(t: ThemeHandle) Int = "UiThemeMutedForeground"
+extern fn _theme_disabled_foreground(t: ThemeHandle) Int = "UiThemeDisabledForeground"
+extern fn _theme_selection(t: ThemeHandle) Int = "UiThemeSelection"
+extern fn _theme_border(t: ThemeHandle) Int = "UiThemeBorder"
+extern fn _theme_mode(t: ThemeHandle) Int = "UiThemeMode"
+extern fn _must_have_theme(ctx: BuildContextHandle) ThemeHandle = "UiMustHaveTheme"
+extern fn _provider_theme(theme: ThemeHandle, child: Widget) Widget = "UiProviderTheme"
+extern fn _run_with_theme(root: Widget, theme: ThemeHandle) Void = "UiRunWithTheme"
+
+// Read a Go ThemeHandle into an Ard Theme struct.
+fn _theme_from_handle(h: ThemeHandle) Theme {
+  Theme{
+    background: _theme_background(h),
+    foreground: _theme_foreground(h),
+    surface: _theme_surface(h),
+    surface_raised: _theme_surface_raised(h),
+    surface_hovered: _theme_surface_hovered(h),
+    surface_pressed: _theme_surface_pressed(h),
+    primary: _theme_primary(h),
+    primary_text: _theme_primary_text(h),
+    primary_hovered: _theme_primary_hovered(h),
+    primary_pressed: _theme_primary_pressed(h),
+    accent: _theme_accent(h),
+    accent_text: _theme_accent_text(h),
+    success: _theme_success(h),
+    success_text: _theme_success_text(h),
+    warning: _theme_warning(h),
+    warning_text: _theme_warning_text(h),
+    danger: _theme_danger(h),
+    danger_text: _theme_danger_text(h),
+    muted_foreground: _theme_muted_foreground(h),
+    disabled_foreground: _theme_disabled_foreground(h),
+    selection: _theme_selection(h),
+    border: _theme_border(h),
+    mode: _theme_mode(h),
+  }
+}
+
+// Write an Ard Theme struct back to a Go ThemeHandle.
+fn _theme_to_handle(theme: Theme) ThemeHandle {
+  mut h = _theme_default()
+  h = _theme_with_background(h, theme.background)
+  h = _theme_with_foreground(h, theme.foreground)
+  h = _theme_with_surface(h, theme.surface)
+  h = _theme_with_surface_raised(h, theme.surface_raised)
+  h = _theme_with_surface_hovered(h, theme.surface_hovered)
+  h = _theme_with_surface_pressed(h, theme.surface_pressed)
+  h = _theme_with_primary(h, theme.primary)
+  h = _theme_with_primary_text(h, theme.primary_text)
+  h = _theme_with_primary_hovered(h, theme.primary_hovered)
+  h = _theme_with_primary_pressed(h, theme.primary_pressed)
+  h = _theme_with_accent(h, theme.accent)
+  h = _theme_with_accent_text(h, theme.accent_text)
+  h = _theme_with_success(h, theme.success)
+  h = _theme_with_success_text(h, theme.success_text)
+  h = _theme_with_warning(h, theme.warning)
+  h = _theme_with_warning_text(h, theme.warning_text)
+  h = _theme_with_danger(h, theme.danger)
+  h = _theme_with_danger_text(h, theme.danger_text)
+  h = _theme_with_muted_foreground(h, theme.muted_foreground)
+  h = _theme_with_disabled_foreground(h, theme.disabled_foreground)
+  h = _theme_with_selection(h, theme.selection)
+  h = _theme_with_border(h, theme.border)
+  h = _theme_with_mode(h, theme.mode)
+  h
+}
+
+fn theme_default() Theme {
+  _theme_from_handle(_theme_default())
+}
+
+fn must_have_theme(ctx: BuildContext) Theme {
+  _theme_from_handle(_must_have_theme(ctx.handle))
+}
+
+fn provider_theme(theme: Theme, child: Widget) Widget {
+  _provider_theme(_theme_to_handle(theme), child)
+}
+
 fn run_with_theme(root: Widget, theme: Theme) Void!Str {
-  Result::ok(_run_with_theme(root, theme))
+  Result::ok(_run_with_theme(root, _theme_to_handle(theme)))
 }
 
 fn build_theme(
@@ -154,98 +238,29 @@ fn build_theme(
   mode: Int?,
 ) Theme {
   mut theme = theme_default()
-  match background {
-    v => { theme = theme_with_background(theme, v) }
-    _ => {}
-  }
-  match foreground {
-    v => { theme = theme_with_foreground(theme, v) }
-    _ => {}
-  }
-  match surface {
-    v => { theme = theme_with_surface(theme, v) }
-    _ => {}
-  }
-  match surface_raised {
-    v => { theme = theme_with_surface_raised(theme, v) }
-    _ => {}
-  }
-  match surface_hovered {
-    v => { theme = theme_with_surface_hovered(theme, v) }
-    _ => {}
-  }
-  match surface_pressed {
-    v => { theme = theme_with_surface_pressed(theme, v) }
-    _ => {}
-  }
-  match primary {
-    v => { theme = theme_with_primary(theme, v) }
-    _ => {}
-  }
-  match primary_text {
-    v => { theme = theme_with_primary_text(theme, v) }
-    _ => {}
-  }
-  match primary_hovered {
-    v => { theme = theme_with_primary_hovered(theme, v) }
-    _ => {}
-  }
-  match primary_pressed {
-    v => { theme = theme_with_primary_pressed(theme, v) }
-    _ => {}
-  }
-  match accent {
-    v => { theme = theme_with_accent(theme, v) }
-    _ => {}
-  }
-  match accent_text {
-    v => { theme = theme_with_accent_text(theme, v) }
-    _ => {}
-  }
-  match success {
-    v => { theme = theme_with_success(theme, v) }
-    _ => {}
-  }
-  match success_text {
-    v => { theme = theme_with_success_text(theme, v) }
-    _ => {}
-  }
-  match warning {
-    v => { theme = theme_with_warning(theme, v) }
-    _ => {}
-  }
-  match warning_text {
-    v => { theme = theme_with_warning_text(theme, v) }
-    _ => {}
-  }
-  match danger {
-    v => { theme = theme_with_danger(theme, v) }
-    _ => {}
-  }
-  match danger_text {
-    v => { theme = theme_with_danger_text(theme, v) }
-    _ => {}
-  }
-  match muted_foreground {
-    v => { theme = theme_with_muted_foreground(theme, v) }
-    _ => {}
-  }
-  match disabled_foreground {
-    v => { theme = theme_with_disabled_foreground(theme, v) }
-    _ => {}
-  }
-  match selection {
-    v => { theme = theme_with_selection(theme, v) }
-    _ => {}
-  }
-  match border {
-    v => { theme = theme_with_border(theme, v) }
-    _ => {}
-  }
-  match mode {
-    v => { theme = theme_with_mode(theme, v) }
-    _ => {}
-  }
+  if background.is_some() { theme.background = background }
+  if foreground.is_some() { theme.foreground = foreground }
+  if surface.is_some() { theme.surface = surface }
+  if surface_raised.is_some() { theme.surface_raised = surface_raised }
+  if surface_hovered.is_some() { theme.surface_hovered = surface_hovered }
+  if surface_pressed.is_some() { theme.surface_pressed = surface_pressed }
+  if primary.is_some() { theme.primary = primary }
+  if primary_text.is_some() { theme.primary_text = primary_text }
+  if primary_hovered.is_some() { theme.primary_hovered = primary_hovered }
+  if primary_pressed.is_some() { theme.primary_pressed = primary_pressed }
+  if accent.is_some() { theme.accent = accent }
+  if accent_text.is_some() { theme.accent_text = accent_text }
+  if success.is_some() { theme.success = success }
+  if success_text.is_some() { theme.success_text = success_text }
+  if warning.is_some() { theme.warning = warning }
+  if warning_text.is_some() { theme.warning_text = warning_text }
+  if danger.is_some() { theme.danger = danger }
+  if danger_text.is_some() { theme.danger_text = danger_text }
+  if muted_foreground.is_some() { theme.muted_foreground = muted_foreground }
+  if disabled_foreground.is_some() { theme.disabled_foreground = disabled_foreground }
+  if selection.is_some() { theme.selection = selection }
+  if border.is_some() { theme.border = border }
+  if mode.is_some() { theme.mode = mode }
   theme
 }
 
