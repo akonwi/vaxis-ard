@@ -264,14 +264,14 @@ fn build_header(page: Int, state: ui::State<DemoState>) ui::Widget {
   ui::column([
     ui::styled_text("Vaxis UI demo", -1, -1, bold()),
     ui::text("n/p pages, Tab focus, q quit"),
-    ui::row(tabs),
+    ui::_flex(0, 0, 2, 0, tabs),
   ])
 }
 
 fn build_footer(page: Int) ui::Widget {
   let total = page_count()
   let label = "page " + (page + 1).to_str() + " / " + total.to_str()
-  ui::styled_text(label, -1, -1, dim())
+  ui::align(ui::styled_text(label, -1, -1, dim()), 1, 0)
 }
 
 // ─── Page router ──────────────────────────────────────────────────────
