@@ -134,6 +134,8 @@ extern fn _theme_disabled_foreground(t: ThemeHandle) Int = "UiThemeDisabledForeg
 extern fn _theme_selection(t: ThemeHandle) Int = "UiThemeSelection"
 extern fn _theme_border(t: ThemeHandle) Int = "UiThemeBorder"
 extern fn _theme_mode(t: ThemeHandle) Int = "UiThemeMode"
+extern fn _theme_light() ThemeHandle = "UiThemeLight"
+extern fn _theme_dark() ThemeHandle = "UiThemeDark"
 extern fn _must_have_theme(ctx: BuildContextHandle) ThemeHandle = "UiMustHaveTheme"
 extern fn _provider_theme(theme: ThemeHandle, child: Widget) Widget = "UiProviderTheme"
 extern fn _run_with_theme(root: Widget, theme: ThemeHandle) Void = "UiRunWithTheme"
@@ -198,6 +200,14 @@ fn _theme_to_handle(theme: Theme) ThemeHandle {
 
 fn theme_default() Theme {
   _theme_from_handle(_theme_default())
+}
+
+fn theme_light() Theme {
+  _theme_from_handle(_theme_light())
+}
+
+fn theme_dark() Theme {
+  _theme_from_handle(_theme_dark())
 }
 
 fn must_have_theme(ctx: BuildContext) Theme {

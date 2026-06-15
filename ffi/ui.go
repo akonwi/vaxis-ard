@@ -655,6 +655,14 @@ func UiThemeSelection(t UiTheme) int          { return int(t.Theme.Selection) }
 func UiThemeBorder(t UiTheme) int             { return int(t.Theme.Border) }
 func UiThemeMode(t UiTheme) int              { return int(t.Theme.Mode) }
 
+// ThemeSet helpers
+func UiThemeLight() UiTheme {
+	return UiTheme{Theme: ui.DefaultThemeSet().Light}
+}
+func UiThemeDark() UiTheme {
+	return UiTheme{Theme: ui.DefaultThemeSet().Dark}
+}
+
 // ─── Animation helpers ───────────────────────────────────────────────
 
 func decodeUiStyle(fg, bg, ulColor, ulStyle, attrs int) vaxis.Style {
