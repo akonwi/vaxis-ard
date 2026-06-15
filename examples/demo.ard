@@ -247,7 +247,7 @@ fn controls_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme
           bg: theme.surface,
           attrs: ui::TextAttrs{bold: true},
         )),
-        ui::positioned(18, 0, ui::styled_text("new", theme.accent_text, -1, attrs: ui::TextAttrs{bold: true})),
+        ui::positioned(18, 0, ui::styled_text("new", fg: theme.accent_text, attrs: ui::TextAttrs{bold: true})),
       ],
       alignment: ui::Alignment::top_left,
     ),
@@ -474,7 +474,7 @@ fn lists_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
       },
     ),
     ui::sized_box(0, 1, ui::text("")),
-    ui::styled_text("Variable-height messages", -1, -1, attrs: ui::TextAttrs{bold: true}),
+    ui::styled_text("Variable-height messages", attrs: ui::TextAttrs{bold: true}),
     ui::sized_box(72, 2, ui::scrollbar(
       ui::custom_scroll_view(
         ui::scroll_controller(),
@@ -511,9 +511,9 @@ fn table_page() ui::Widget {
       2, 1,
       [
         ui::table_row([
-          ui::styled_text("job", -1, -1, attrs: ui::TextAttrs{bold: true}),
-          ui::styled_text("status", -1, -1, attrs: ui::TextAttrs{bold: true}),
-          ui::styled_text("id", -1, -1, attrs: ui::TextAttrs{bold: true}),
+          ui::styled_text("job", attrs: ui::TextAttrs{bold: true}),
+          ui::styled_text("status", attrs: ui::TextAttrs{bold: true}),
+          ui::styled_text("id", attrs: ui::TextAttrs{bold: true}),
         ]),
         ui::table_row([ui::text("build"), ui::text("running tests"), ui::text("1024")]),
         ui::table_row([ui::text("lint"), ui::text("waiting for worker"), ui::text("7")]),
@@ -611,11 +611,11 @@ fn animation_page(model: DemoState, theme: ui::Theme) ui::Widget {
 
 // ─── Theme page ───────────────────────────────────────────────────────
 
-fn theme_swatch_span(name: Str, bg: Int, fg: Int) ui::TextSpan {
+fn theme_swatch_span(name: Str, bg: vaxis::Color, fg: vaxis::Color) ui::TextSpan {
   ui::span(" " + pad_right(name, 24) + " ", fg: fg, bg: bg)
 }
 
-fn theme_text_span(name: Str, fg: Int) ui::TextSpan {
+fn theme_text_span(name: Str, fg: vaxis::Color) ui::TextSpan {
   ui::span(" " + pad_right(name, 24) + " ", fg: fg)
 }
 
@@ -644,7 +644,7 @@ fn palette_scale(name: Str, tones: [Int]) ui::Widget {
   mut spans: [ui::TextSpan] = [ui::span(pad_right(name, 9))]
   mut i = 0
   while i < tones.size() {
-    spans.push(ui::span("  ", bg: tones.at(i)))
+    spans.push(ui::span("  ", bg: vaxis::int_to_color(tones.at(i))))
     i = i + 1
   }
   ui::rich_text(spans)
@@ -1021,5 +1021,5 @@ fn root_widget() ui::Widget {
 // ─── Entrypoint ───────────────────────────────────────────────────────
 
 fn main() Void {
-  ui::run_with_theme_set(root_widget(), ui::default_theme_set())
+  ui::run(root_widget(), ui::default_theme_set())
 }
