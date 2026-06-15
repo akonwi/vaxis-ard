@@ -2,6 +2,7 @@ use vaxis
 use vaxis/ui
 use ard/async
 use ard/duration
+use ard/maybe
 
 // ─── Domain ───────────────────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ struct DemoState {
   dialog_open: Bool,
   chat: Str,
   logs: [Str],
+  anim: ui::AnimationController?,
 }
 
 fn initial_state() DemoState {
@@ -31,7 +33,8 @@ fn initial_state() DemoState {
   }
 }
 
-fn page_count() Int { 6 }
+fn page_count() Int { 7 }
+fn animation_page_index() Int { 5 }
 fn demo_quit() Str { "demo.quit" }
 fn demo_next() Str { "demo.next-page" }
 fn demo_prev() Str { "demo.previous-page" }
@@ -523,6 +526,87 @@ fn table_page() ui::Widget {
   ])
 }
 
+// ─── Animation page ───────────────────────────────────────────────────
+
+fn animation_status_text(status: ui::AnimationStatus) Str {
+  match status {
+    ui::AnimationStatus::forward   => "running",
+    ui::AnimationStatus::completed => "complete",
+    ui::AnimationStatus::idle      => "idle",
+  }
+}
+
+fn animation_track(value: Float, width: Int) Str {
+  if width <= 1 { "◆" }
+  else {
+    mut pos = ui::float_to_int(value * Float::from_int(width - 1))
+    if pos < 0 { pos = 0 }
+    if pos >= width { pos = width - 1 }
+    mut out = "|"
+    mut i = 0
+    while i < pos {
+      out = out + " "
+      i = i + 1
+    }
+    out = out + "◆"
+    mut j = pos + 1
+    while j < width - 1 {
+      out = out + " "
+      j = j + 1
+    }
+    out + "|"
+  }
+}
+
+fn animation_page(model: DemoState, theme: ui::Theme) ui::Widget {
+  let ctrl = model.anim.expect("animation controller created in init")
+  let value = ui::anim_value(ctrl)
+  let status = animation_status_text(ui::anim_status(ctrl))
+  ui::column(
+    [
+      ui::rich_text(
+        [
+          ui::span("Animation", attrs: ui::TextAttrs{bold: true}),
+          ui::span("\nThis page uses a StateBase-owned AnimationController. The runner ticks it before each frame and the state is rebuilt while it is active."),
+        ],
+        soft_wrap: true,
+      ),
+      ui::sized_box(0, 1, ui::text("")),
+      ui::rich_text([
+        ui::span("value: "),
+        ui::span(value.to_str(), attrs: ui::TextAttrs{bold: true}),
+        ui::span("   status: "),
+        ui::span(status, attrs: ui::TextAttrs{bold: true}),
+      ]),
+      ui::constrained_box(
+        ui::text(animation_track(value, 120), overflow: ui::TextOverflow::clip),
+        max_w: 120,
+      ),
+      ui::constrained_box(
+        ui::progress_bar(
+          value,
+          width: 120,
+          gradient_start: theme.accent,
+          gradient_end: theme.primary_hovered,
+        ),
+        max_w: 120,
+      ),
+      ui::sized_box(0, 1, ui::text("")),
+      ui::row(
+        [
+          ui::button("Replay", fn(ctx: ui::EventContext) { ui::anim_forward(ctrl) }),
+          ui::sized_box(1, 1, ui::text("")),
+          ui::button("Stop", fn(ctx: ui::EventContext) { ui::anim_stop(ctrl) }),
+          ui::sized_box(1, 1, ui::text("")),
+          ui::button("Reset", fn(ctx: ui::EventContext) { ui::anim_reset(ctrl) }),
+        ],
+        cross_align: ui::CrossAlign::center,
+      ),
+    ],
+    cross_align: ui::CrossAlign::start,
+  )
+}
+
 // ─── Theme page ───────────────────────────────────────────────────────
 
 fn theme_swatch_span(name: Str, bg: Int, fg: Int) ui::TextSpan {
@@ -652,7 +736,8 @@ fn page_name(index: Int) Str {
   else if index == 2 { "Controls" }
   else if index == 3 { "Lists" }
   else if index == 4 { "Table" }
-  else if index == 5 { "Theme" }
+  else if index == 5 { "Animation" }
+  else if index == 6 { "Theme" }
   else { "?" }
 }
 
@@ -662,14 +747,28 @@ fn page_slug(index: Int) Str {
   else if index == 2 { "controls" }
   else if index == 3 { "lists" }
   else if index == 4 { "table" }
-  else if index == 5 { "theme" }
+  else if index == 5 { "animation" }
+  else if index == 6 { "theme" }
   else { "?" }
 }
 
-fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
+// Navigate to `target_page` and (if Animation) restart the controller
+// so the page is interesting to look at on entry. Matches upstream's
+// setPage trigger.
+fn go_to_page(model: DemoState, state: ui::State<DemoState>, target: Int) {
+  state.set(fn(mut s: DemoState) { s.page = target })
+  if target == animation_page_index() {
+    match model.anim {
+      ctrl => ui::anim_forward(ctrl),
+      _ => {},
+    }
+  }
+}
+
+fn build_header(page: Int, model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
   mut tabs: [ui::Widget] = []
   mut i = 0
-  while i < 6 {
+  while i < page_count() {
     // Freeze the loop counter as an immutable per-iteration binding;
     // otherwise every tab's on_pressed would capture the same live
     // `mut i` by reference and set state.page to its post-loop value
@@ -684,7 +783,7 @@ fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Wi
       tab_theme.surface_hovered = theme.primary_hovered
     }
     tabs.push(ui::provider_theme(tab_theme, ui::button(page_name(tab_index), fn(ctx: ui::EventContext) {
-      state.set(fn(mut s: DemoState) { s.page = tab_index })
+      go_to_page(model, state, tab_index)
     })))
     i = i + 1
   }
@@ -721,7 +820,8 @@ fn build_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
     2 => controls_page(model, state, theme),
     3 => lists_page(model, state, theme),
     4 => table_page(),
-    5 => theme_page(theme),
+    5 => animation_page(model, theme),
+    6 => theme_page(theme),
     _ => home_page(model.ticks),
   }
 }
@@ -747,13 +847,16 @@ fn root_widget() ui::Widget {
           })
         }
       })
-      initial_state()
+      let anim = ui::animation_controller(ctx, 1200, curve: ui::AnimationCurve::ease_in_out)
+      mut s = initial_state()
+      s.anim = maybe::some(anim)
+      s
     },
     build: fn(ctx: ui::BuildContext, state: ui::State<DemoState>) ui::Widget {
       let model = state.value()
       let theme = ui::must_have_theme(ctx)
       let inner = ui::padding(1, ui::column([
-        build_header(model.page, state, theme),
+        build_header(model.page, model, state, theme),
         ui::sized_box(80, 1, ui::text("")),
         ui::padding(1, build_page(model, state, theme)),
         ui::sized_box(80, 1, ui::text("")),
@@ -768,11 +871,11 @@ fn root_widget() ui::Widget {
             ui::EventResult::handled
           }),
           ui::action(demo_next(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
-            state.set(fn(mut s: DemoState) { s.page = (s.page + 1) % page_count() })
+            go_to_page(model, state, (model.page + 1) % page_count())
             ui::EventResult::handled
           }),
           ui::action(demo_prev(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
-            state.set(fn(mut s: DemoState) { s.page = (s.page + page_count() - 1) % page_count() })
+            go_to_page(model, state, (model.page + page_count() - 1) % page_count())
             ui::EventResult::handled
           }),
           ui::action(demo_dialog(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {

@@ -819,27 +819,95 @@ fn cursor(col: Int, row: Int, shape: Int, hidden: Bool, child: Widget) Widget {
 
 extern type AnimationController = "*ui.AnimationController"
 
-extern fn _anim_new(state_ctx: StateHandle, duration_ms: Int) AnimationController = "UiNewAnimation"
+extern fn _anim_new(state_ctx: StateHandle, duration_ms: Int, curve: Int) AnimationController = "UiNewAnimation"
 extern fn _anim_forward(ctrl: AnimationController) Void = "UiAnimForward"
 extern fn _anim_reset(ctrl: AnimationController) Void = "UiAnimReset"
 extern fn _anim_stop(ctrl: AnimationController) Void = "UiAnimStop"
 extern fn _anim_value(ctrl: AnimationController) Float = "UiAnimValue"
+extern fn _anim_status(ctrl: AnimationController) Int = "UiAnimStatus"
 
-fn animation_controller<$T>(state: State<$T>, duration_ms: Int) AnimationController {
-  _anim_new(state.handle, duration_ms)
+// Float-to-Int workaround: Ard compiler <= v0.23.0 lacks the AIR lowering
+// for `Float.to_int()`. Drop this once the upstream fix ships.
+extern fn float_to_int(f: Float) Int = "UiFloatToInt"
+
+enum AnimationCurve {
+  linear,
+  ease_in_out,
+}
+
+impl AnimationCurve {
+  fn to_int() Int {
+    match self {
+      AnimationCurve::linear      => 0,
+      AnimationCurve::ease_in_out => 1,
+    }
+  }
+}
+
+enum AnimationStatus {
+  idle,
+  forward,
+  completed,
+}
+
+// AnimationStatus has no `to_int` (we never write it back) — only a
+// constructor from the FFI int. Free function because Ard's `::`
+// syntax is for enum variants, not static methods.
+fn _animation_status_from_int(value: Int) AnimationStatus {
+  if value == 1 { AnimationStatus::forward }
+  else if value == 2 { AnimationStatus::completed }
+  else { AnimationStatus::idle }
+}
+
+// animation_controller must be created inside `init` (or later in `build`)
+// where ctx.state is set — it needs the underlying StateBase to register
+// the controller with the element's animation list. Calling it elsewhere
+// will panic at the FFI boundary.
+fn animation_controller(
+  ctx: BuildContext,
+  duration_ms: Int,
+  curve: AnimationCurve?,
+) AnimationController {
+  let handle = ctx.state.expect("animation_controller requires a stateful BuildContext")
+  _anim_new(handle, duration_ms, curve.or(AnimationCurve::linear).to_int())
 }
 
 fn anim_forward(ctrl: AnimationController) { _anim_forward(ctrl) }
 fn anim_reset(ctrl: AnimationController) { _anim_reset(ctrl) }
 fn anim_stop(ctrl: AnimationController) { _anim_stop(ctrl) }
 fn anim_value(ctrl: AnimationController) Float { _anim_value(ctrl) }
+fn anim_status(ctrl: AnimationController) AnimationStatus {
+  _animation_status_from_int(_anim_status(ctrl))
+}
 
 // ── ProgressBar ───────────────────────────────────────────────────────
 
-extern fn _progress_bar(value: Float, width: Int, filled_fg: Int, filled_bg: Int, filled_attrs: Int, empty_fg: Int, empty_bg: Int, empty_attrs: Int) Widget = "UiProgressBar"
+extern fn _progress_bar(
+  value: Float,
+  width: Int,
+  filled_fg: Int, filled_bg: Int, filled_attrs: Int,
+  empty_fg: Int, empty_bg: Int, empty_attrs: Int,
+  gradient_start: Int, gradient_end: Int,
+) Widget = "UiProgressBar"
 
-fn progress_bar(value: Float, width: Int, filled_bg: Int, empty_bg: Int) Widget {
-  _progress_bar(value, width, -1, filled_bg, 0, -1, empty_bg, 0)
+// Pass gradient_start / gradient_end for a gradient-filled bar; vaxis
+// interpolates the fill across them. Otherwise solid filled_bg / empty_bg
+// (or theme defaults if -1).
+fn progress_bar(
+  value: Float,
+  width: Int,
+  filled_bg: Int?,
+  empty_bg: Int?,
+  gradient_start: Int?,
+  gradient_end: Int?,
+) Widget {
+  _progress_bar(
+    value, width,
+    -1, filled_bg.or(-1), 0,
+    -1, empty_bg.or(-1), 0,
+    gradient_start.or(-1),
+    gradient_end.or(-1),
+  )
 }
 
 // ── RichText ──────────────────────────────────────────────────────────

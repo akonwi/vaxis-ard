@@ -1,6 +1,8 @@
 package ffi
 
 import (
+	"time"
+
 	"git.sr.ht/~rockorager/vaxis"
 	"git.sr.ht/~rockorager/vaxis/ui"
 )
@@ -378,18 +380,45 @@ func UiCursor(col, row, shape int, hidden bool, child ui.Widget) ui.Widget {
 
 // ─── Animation ────────────────────────────────────────────────────────
 
-func UiNewAnimation(stateCtx any, durationMs int) *ui.AnimationController {
-	// Animation requires StateBase reference — not wired yet for dependency use.
-	return nil
+// UiNewAnimation creates an AnimationController owned by the stateful
+// element behind `stateCtx`. Curve is indexed: 0 linear, 1 ease_in_out.
+func UiNewAnimation(stateCtx any, durationMs, curve int) *ui.AnimationController {
+	ctx, ok := stateCtx.(*UiStateContext)
+	if !ok || ctx == nil || ctx.sb == nil {
+		return nil
+	}
+	opts := ui.AnimationOptions{
+		Duration: time.Duration(durationMs) * time.Millisecond,
+	}
+	switch curve {
+	case 1:
+		opts.Curve = ui.EaseInOut
+	default:
+		opts.Curve = ui.Linear
+	}
+	return ctx.sb.NewAnimation(opts)
 }
 
-func UiAnimForward(ctrl *ui.AnimationController)  { if ctrl != nil { ctrl.Forward() } }
+func UiAnimForward(ctrl *ui.AnimationController) { if ctrl != nil { ctrl.Forward() } }
 func UiAnimReset(ctrl *ui.AnimationController)   { if ctrl != nil { ctrl.Reset() } }
 func UiAnimStop(ctrl *ui.AnimationController)    { if ctrl != nil { ctrl.Stop() } }
 func UiAnimValue(ctrl *ui.AnimationController) float64 {
 	if ctrl == nil { return 0 }
 	return ctrl.Value()
 }
+
+// UiAnimStatus returns the controller's status as an int:
+// 0 idle, 1 forward (running), 2 completed.
+func UiAnimStatus(ctrl *ui.AnimationController) int {
+	if ctrl == nil { return 0 }
+	return int(ctrl.Status())
+}
+
+// UiFloatToInt is a workaround for Ard compiler <= v0.23.0: the checker
+// accepts `Float.to_int()` but the AIR lowerer is missing the FloatToInt
+// branch (fixed on main, post-v0.23.0). Drop this once a release with
+// the fix ships.
+func UiFloatToInt(f float64) int { return int(f) }
 
 func UiModalBarrier(fg, bg, ulColor, ulStyle, attrs int, opacity int) ui.Widget {
 	return ui.ModalBarrier{Color: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs).Background, Opacity: uint8(opacity)}
@@ -422,13 +451,29 @@ func UiListTile(
 	return tile
 }
 
-func UiProgressBar(value float64, width int, filledFg, filledBg, filledUlColor, filledUlStyle, filledAttrs, emptyFg, emptyBg, emptyUlColor, emptyUlStyle, emptyAttrs int) ui.Widget {
-	return ui.ProgressBar{
+// UiProgressBar binds vaxis ProgressBar. fg/bg use -1 for "inherit
+// theme default"; underline fields aren't exposed (not needed for a
+// progress fill). gradientStart/gradientEnd use -1 for "no gradient";
+// when both are set, vaxis interpolates the filled portion across them.
+func UiProgressBar(
+	value float64, width int,
+	filledFg, filledBg, filledAttrs int,
+	emptyFg, emptyBg, emptyAttrs int,
+	gradientStart, gradientEnd int,
+) ui.Widget {
+	bar := ui.ProgressBar{
 		Value:       value,
 		Width:       width,
-		FilledStyle: decodeUiStyle(filledFg, filledBg, filledUlColor, filledUlStyle, filledAttrs),
-		EmptyStyle:  decodeUiStyle(emptyFg, emptyBg, emptyUlColor, emptyUlStyle, emptyAttrs),
+		FilledStyle: decodeUiStyle(filledFg, filledBg, -1, 0, filledAttrs),
+		EmptyStyle:  decodeUiStyle(emptyFg, emptyBg, -1, 0, emptyAttrs),
 	}
+	if gradientStart >= 0 {
+		bar.GradientStart = colorFromInt(gradientStart)
+	}
+	if gradientEnd >= 0 {
+		bar.GradientEnd = colorFromInt(gradientEnd)
+	}
+	return bar
 }
 
 // UiTextSpan carries a single styled run of text across the FFI boundary.
