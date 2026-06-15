@@ -523,7 +523,7 @@ func UiThemeDefault() UiTheme {
 	return UiTheme{Theme: ui.DefaultTheme()}
 }
 
-func UiMustDependTheme(ctx ui.BuildContext) UiTheme {
+func UiMustHaveTheme(ctx ui.BuildContext) UiTheme {
 	return UiTheme{Theme: ui.MustDepend[ui.Theme](ctx)}
 }
 

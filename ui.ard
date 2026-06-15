@@ -88,7 +88,7 @@ extern fn _theme_background(t: Theme) Int = "UiThemeBackground"
 extern fn _theme_foreground(t: Theme) Int = "UiThemeForeground"
 extern fn _theme_surface(t: Theme) Int = "UiThemeSurface"
 extern fn _theme_border(t: Theme) Int = "UiThemeBorder"
-extern fn _must_depend_theme(ctx: BuildContextHandle) Theme = "UiMustDependTheme"
+extern fn _must_have_theme(ctx: BuildContextHandle) Theme = "UiMustHaveTheme"
 extern fn _provider_theme(theme: Theme, child: Widget) Widget = "UiProviderTheme"
 extern fn _run_with_theme(root: Widget, theme: Theme) Void = "UiRunWithTheme"
 
@@ -122,7 +122,7 @@ fn theme_background(t: Theme) Int { _theme_background(t) }
 fn theme_foreground(t: Theme) Int { _theme_foreground(t) }
 fn theme_surface(t: Theme) Int { _theme_surface(t) }
 fn theme_border(t: Theme) Int { _theme_border(t) }
-fn must_depend_theme(ctx: BuildContext) Theme { _must_depend_theme(ctx.handle) }
+fn must_have_theme(ctx: BuildContext) Theme { _must_have_theme(ctx.handle) }
 fn provider_theme(theme: Theme, child: Widget) Widget { _provider_theme(theme, child) }
 fn run_with_theme(root: Widget, theme: Theme) Void!Str {
   Result::ok(_run_with_theme(root, theme))
