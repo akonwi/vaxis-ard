@@ -5,6 +5,25 @@ reason they are not implemented.
 
 ## Deferred — blocked
 
+### `EventContext.Notify` — terminal notification support
+
+Bound as `ui::notify(ctx, title, body)`. The underlying vaxis Go function
+uses **OSC 777** (`\x1b]777;notify;title;body\x1b\\`) when a non‑empty
+title is passed — this is the foot terminal protocol. Passing an empty
+title falls back to **OSC 9** (`\x1b]9;body\x1b\\`). Neither sequence
+is widely supported:
+
+| Terminal | OSC 9 | OSC 777 |
+|----------|-------|--------|
+| iTerm2   | ✓     | ✗      |
+| Ghostty  | ✗     | ✗      |
+| foot     | ?     | ✓      |
+| WezTerm  | ✓     | ?      |
+| Kitty    | ✗     | ✗      |
+
+No further action on our side — this is a terminal capability issue, not
+a binding gap. Documented here for visibility.
+
 ### `encode_cells` / `StyledString.encode()`
 
 Serializes `[Cell]` into an ANSI SGR‑encoded string. The implementation is
