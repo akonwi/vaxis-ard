@@ -265,6 +265,16 @@ fn page_name(index: Int) Str {
   else { "?" }
 }
 
+fn page_slug(index: Int) Str {
+  if index == 0 { "home" }
+  else if index == 1 { "text" }
+  else if index == 2 { "controls" }
+  else if index == 3 { "lists" }
+  else if index == 4 { "table" }
+  else if index == 5 { "theme" }
+  else { "?" }
+}
+
 fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
   mut tabs: [ui::Widget] = []
   mut i = 0
@@ -293,8 +303,17 @@ fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Wi
 
 fn build_footer(page: Int) ui::Widget {
   let total = page_count()
-  let label = "page " + (page + 1).to_str() + " / " + total.to_str()
-  ui::row([ui::styled_text(label, -1, -1, dim())], ui::MainAlign::end)
+  ui::row(
+    [ui::rich_text(
+      [
+        ui::span("page ", 0),
+        ui::span((page + 1).to_str(), bold()),
+        ui::span(" / " + total.to_str() + "  " + page_slug(page), 0),
+      ],
+      soft_wrap: false,
+    )],
+    main_align: ui::MainAlign::end,
+  )
 }
 
 // ─── Page router ──────────────────────────────────────────────────────
