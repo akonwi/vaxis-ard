@@ -245,10 +245,6 @@ fn page_name(index: Int) Str {
   else { "?" }
 }
 
-fn page_label(index: Int, page: Int) Str {
-  if index == page { "[" + page_name(index) + "]" } else { " " + page_name(index) + " " }
-}
-
 fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
   mut tabs: [ui::Widget] = []
   mut i = 0
@@ -261,14 +257,16 @@ fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Wi
       tab_theme.surface = theme.primary
       tab_theme.surface_hovered = theme.primary_hovered
     }
-    tabs.push(ui::provider_theme(tab_theme, ui::button(page_label(i, page), fn(ctx: ui::EventContext) {
+    tabs.push(ui::provider_theme(tab_theme, ui::button(page_name(i), fn(ctx: ui::EventContext) {
       state.set(fn(mut s: DemoState) { s.page = i })
     })))
     i = i + 1
   }
   ui::column_stretch([
-    ui::styled_text("Vaxis UI demo", -1, -1, bold()),
-    ui::text("n/p pages, Tab focus, q quit"),
+    ui::rich_text([
+      ui::span("Vaxis UI demo", bold()),
+      ui::span("  —  Alt+K commands, n/p pages, Tab focus, q quit", 0),
+    ], false),
     ui::row(tabs),
   ])
 }
