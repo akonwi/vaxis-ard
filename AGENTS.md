@@ -242,6 +242,29 @@ refactor.
   in methods on `App`, `Window`, or free functions.
 - Examples import the library; they do **not** duplicate extern declarations inline
 
+## Ard language resource: the `ard-expert` sub-agent
+
+When you need authoritative answers about Ard syntax, semantics, stdlib
+(`ard/maybe`, `ard/async`, `ard/duration`, …), or idiomatic patterns,
+delegate to the **`ard-expert`** sub-agent. It is docs-first for surface
+language / type-system / stdlib questions, source-first for compiler
+and runtime internals, and cites the relevant page or file in every
+reply.
+
+Use it before:
+- writing a new extern signature that crosses the FFI boundary,
+- introducing a stdlib type you haven't used here before
+  (`Fiber`, `Maybe`, `Result`, …),
+- adopting a syntax you're unsure compiles (nullable args, enum
+  variants, generics, mutable captures, etc.),
+- proposing a non-trivial refactor of the public API.
+
+Also useful for **code review** on an Ard change — ask it to sanity-
+check a snippet against current language rules.
+
+The "Key Ard language notes" below are a fast cheat-sheet, not a
+spec. Anything subtle should be confirmed with `ard-expert`.
+
 ## Key Ard language notes
 
 - **No `return`**: use `if/else` as final expression or mutable variables for early exit
