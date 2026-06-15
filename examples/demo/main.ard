@@ -45,13 +45,33 @@ fn pad_left(s: Str, width: Int) Str {
 // ─── Home page ────────────────────────────────────────────────────────
 
 fn home_page() ui::Widget {
-  ui::column([
-    ui::styled_text("Home", -1, -1, bold()),
-    ui::text("This demo exercises the vaxis/ui widget bindings from Ard."),
-    ui::text("Use n/p to switch pages, Tab to move focus, q to quit."),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::text("Pages: Home, Text, Controls, Lists, Table, Theme"),
-  ])
+  // ticks placeholder until the goroutine-driven Runtime().Dispatch ticker
+  // piece lands (see upstream demo).
+  let ticks = 0
+  ui::column(
+    [
+      ui::rich_text(
+        [
+          ui::span("Home", bold()),
+          ui::span("\nThis example is intentionally larger than the counter. It uses state, focus, buttons, shortcuts, rich text, wrapping text, alignment, themed borders, and runtime dispatch from a goroutine.", 0),
+        ],
+        soft_wrap: true,
+      ),
+      ui::sized_box(80, 1, ui::text("")),
+      ui::text(
+        "The ticker below is updated through BuildContext.Runtime().Dispatch, then SetState marks this widget dirty.",
+        soft_wrap: true,
+      ),
+      ui::rich_text(
+        [
+          ui::span("ticks: ", 0),
+          ui::span(ticks.to_str(), bold()),
+        ],
+        soft_wrap: false,
+      ),
+    ],
+    cross_align: ui::CrossAlign::start,
+  )
 }
 
 // ─── Text page ────────────────────────────────────────────────────────

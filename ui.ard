@@ -643,12 +643,12 @@ fn rich_text(spans: [TextSpan], soft_wrap: Bool?) Widget {
 
 // ── Basic widgets ─────────────────────────────────────────────────────
 
-extern fn _text(value: Str) Widget   = "UiText"
+extern fn _text(value: Str, soft_wrap: Bool) Widget   = "UiText"
 extern fn _button(label: Str, on_pressed: fn(EventContextHandle)) Widget   = "UiButton"
 
 extern fn _styled_text(value: Str, fg: Int, bg: Int, ul_color: Int, ul_style: Int, attrs: Int) Widget = "UiStyledText"
 
-fn text(value: Str) Widget { _text(value) }
+fn text(value: Str, soft_wrap: Bool?) Widget { _text(value, soft_wrap.or(false)) }
 
 fn styled_text(value: Str, fg: Int, bg: Int, attrs: Int) Widget {
   _styled_text(value, fg, bg, -1, 0, attrs)
