@@ -248,7 +248,7 @@ func UiAlign(child ui.Widget, x, y int) ui.Widget {
 	return ui.Align{Child: child, Alignment: ui.Alignment{X: x, Y: y}}
 }
 
-func UiConstrainedBox(minW, maxW, minH, maxH int, child ui.Widget) ui.Widget {
+func UiConstrainedBox(child ui.Widget, minW, maxW, minH, maxH int) ui.Widget {
 	return ui.ConstrainedBox{Child: child, Constraints: ui.Constraints{MinWidth: minW, MaxWidth: maxW, MinHeight: minH, MaxHeight: maxH}}
 }
 

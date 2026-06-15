@@ -466,10 +466,32 @@ fn align(child: Widget, x: Int, y: Int) Widget { _align(child, x, y) }
 
 // ── ConstrainedBox ────────────────────────────────────────────────────
 
-extern fn _constrained_box(min_w: Int, max_w: Int, min_h: Int, max_h: Int, child: Widget) Widget = "UiConstrainedBox"
+// All four bounds default to 0 (= no constraint). vaxis normalizes a
+// max of 0 to Unbounded internally, so omitted args produce a passthrough
+// box. Set only the dimensions you care about.
 
-fn constrained_box(min_w: Int, max_w: Int, min_h: Int, max_h: Int, child: Widget) Widget {
-  _constrained_box(min_w, max_w, min_h, max_h, child)
+extern fn _constrained_box(
+  child: Widget,
+  min_w: Int,
+  max_w: Int,
+  min_h: Int,
+  max_h: Int,
+) Widget = "UiConstrainedBox"
+
+fn constrained_box(
+  child: Widget,
+  min_w: Int?,
+  max_w: Int?,
+  min_h: Int?,
+  max_h: Int?,
+) Widget {
+  _constrained_box(
+    child,
+    min_w.or(0),
+    max_w.or(0),
+    min_h.or(0),
+    max_h.or(0),
+  )
 }
 
 // ── Stack ─────────────────────────────────────────────────────────────
