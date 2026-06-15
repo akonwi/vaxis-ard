@@ -644,18 +644,8 @@ func UiRun(root ui.Widget) {
 	}
 }
 
-func UiRunWithBaseColors(root ui.Widget, black, red, green, yellow, blue, magenta, cyan, white int) {
-	err := ui.Run(root, ui.WithBaseColors(ui.BaseColors{
-		Black:   colorFromInt(black),
-		Red:     colorFromInt(red),
-		Green:   colorFromInt(green),
-		Yellow:  colorFromInt(yellow),
-		Blue:    colorFromInt(blue),
-		Magenta: colorFromInt(magenta),
-		Cyan:    colorFromInt(cyan),
-		White:   colorFromInt(white),
-	}))
-	if err != nil {
+func UiRunWithThemeSet(root ui.Widget, ts UiThemeSet) {
+	if err := ui.Run(root, ui.WithThemeSet(ts.Set)); err != nil {
 		panic(err)
 	}
 }
@@ -718,131 +708,71 @@ func UiProviderTheme(t UiTheme, child ui.Widget) ui.Widget {
 	return ui.Provider[ui.Theme]{Value: t.Theme, Child: child}
 }
 
-func UiRunWithTheme(root ui.Widget, theme UiTheme) {
-	if err := ui.Run(root, ui.WithTheme(theme.Theme)); err != nil {
-		panic(err)
+// UiThemeColors returns all 22 semantic colors as a flat int slice.
+// Order: background, foreground, surface, surface_raised, surface_hovered,
+// surface_pressed, primary, primary_text, primary_hovered, primary_pressed,
+// accent, accent_text, success, success_text, warning, warning_text,
+// danger, danger_text, muted_foreground, disabled_foreground, selection, border.
+func UiThemeColors(t UiTheme) []int {
+	return []int{
+		int(t.Theme.Background),
+		int(t.Theme.Foreground),
+		int(t.Theme.Surface),
+		int(t.Theme.SurfaceRaised),
+		int(t.Theme.SurfaceHovered),
+		int(t.Theme.SurfacePressed),
+		int(t.Theme.Primary),
+		int(t.Theme.PrimaryText),
+		int(t.Theme.PrimaryHovered),
+		int(t.Theme.PrimaryPressed),
+		int(t.Theme.Accent),
+		int(t.Theme.AccentText),
+		int(t.Theme.Success),
+		int(t.Theme.SuccessText),
+		int(t.Theme.Warning),
+		int(t.Theme.WarningText),
+		int(t.Theme.Danger),
+		int(t.Theme.DangerText),
+		int(t.Theme.MutedForeground),
+		int(t.Theme.DisabledForeground),
+		int(t.Theme.Selection),
+		int(t.Theme.Border),
 	}
 }
 
-// ─── Theme field setters ─────────────────────────────────────────────
+// UiThemeSetColors writes all 22 semantic colors from a flat int slice.
+func UiThemeSetColors(t UiTheme, colors []int) UiTheme {
+	set := func(dst *vaxis.Color, i int) { if i < len(colors) { *dst = vaxis.Color(colors[i]) } }
+	set(&t.Theme.Background, 0)
+	set(&t.Theme.Foreground, 1)
+	set(&t.Theme.Surface, 2)
+	set(&t.Theme.SurfaceRaised, 3)
+	set(&t.Theme.SurfaceHovered, 4)
+	set(&t.Theme.SurfacePressed, 5)
+	set(&t.Theme.Primary, 6)
+	set(&t.Theme.PrimaryText, 7)
+	set(&t.Theme.PrimaryHovered, 8)
+	set(&t.Theme.PrimaryPressed, 9)
+	set(&t.Theme.Accent, 10)
+	set(&t.Theme.AccentText, 11)
+	set(&t.Theme.Success, 12)
+	set(&t.Theme.SuccessText, 13)
+	set(&t.Theme.Warning, 14)
+	set(&t.Theme.WarningText, 15)
+	set(&t.Theme.Danger, 16)
+	set(&t.Theme.DangerText, 17)
+	set(&t.Theme.MutedForeground, 18)
+	set(&t.Theme.DisabledForeground, 19)
+	set(&t.Theme.Selection, 20)
+	set(&t.Theme.Border, 21)
+	return t
+}
 
-func UiThemeWithBackground(t UiTheme, color int) UiTheme {
-	t.Theme.Background = vaxis.Color(color)
-	return t
-}
-func UiThemeWithForeground(t UiTheme, color int) UiTheme {
-	t.Theme.Foreground = vaxis.Color(color)
-	return t
-}
-func UiThemeWithSurface(t UiTheme, color int) UiTheme {
-	t.Theme.Surface = vaxis.Color(color)
-	return t
-}
-func UiThemeWithSurfaceRaised(t UiTheme, color int) UiTheme {
-	t.Theme.SurfaceRaised = vaxis.Color(color)
-	return t
-}
-func UiThemeWithSurfaceHovered(t UiTheme, color int) UiTheme {
-	t.Theme.SurfaceHovered = vaxis.Color(color)
-	return t
-}
-func UiThemeWithSurfacePressed(t UiTheme, color int) UiTheme {
-	t.Theme.SurfacePressed = vaxis.Color(color)
-	return t
-}
-func UiThemeWithPrimary(t UiTheme, color int) UiTheme {
-	t.Theme.Primary = vaxis.Color(color)
-	return t
-}
-func UiThemeWithPrimaryText(t UiTheme, color int) UiTheme {
-	t.Theme.PrimaryText = vaxis.Color(color)
-	return t
-}
-func UiThemeWithPrimaryHovered(t UiTheme, color int) UiTheme {
-	t.Theme.PrimaryHovered = vaxis.Color(color)
-	return t
-}
-func UiThemeWithPrimaryPressed(t UiTheme, color int) UiTheme {
-	t.Theme.PrimaryPressed = vaxis.Color(color)
-	return t
-}
-func UiThemeWithAccent(t UiTheme, color int) UiTheme {
-	t.Theme.Accent = vaxis.Color(color)
-	return t
-}
-func UiThemeWithAccentText(t UiTheme, color int) UiTheme {
-	t.Theme.AccentText = vaxis.Color(color)
-	return t
-}
-func UiThemeWithSuccess(t UiTheme, color int) UiTheme {
-	t.Theme.Success = vaxis.Color(color)
-	return t
-}
-func UiThemeWithSuccessText(t UiTheme, color int) UiTheme {
-	t.Theme.SuccessText = vaxis.Color(color)
-	return t
-}
-func UiThemeWithWarning(t UiTheme, color int) UiTheme {
-	t.Theme.Warning = vaxis.Color(color)
-	return t
-}
-func UiThemeWithWarningText(t UiTheme, color int) UiTheme {
-	t.Theme.WarningText = vaxis.Color(color)
-	return t
-}
-func UiThemeWithDanger(t UiTheme, color int) UiTheme {
-	t.Theme.Danger = vaxis.Color(color)
-	return t
-}
-func UiThemeWithDangerText(t UiTheme, color int) UiTheme {
-	t.Theme.DangerText = vaxis.Color(color)
-	return t
-}
-func UiThemeWithMutedForeground(t UiTheme, color int) UiTheme {
-	t.Theme.MutedForeground = vaxis.Color(color)
-	return t
-}
-func UiThemeWithDisabledForeground(t UiTheme, color int) UiTheme {
-	t.Theme.DisabledForeground = vaxis.Color(color)
-	return t
-}
-func UiThemeWithSelection(t UiTheme, color int) UiTheme {
-	t.Theme.Selection = vaxis.Color(color)
-	return t
-}
-func UiThemeWithBorder(t UiTheme, color int) UiTheme {
-	t.Theme.Border = vaxis.Color(color)
-	return t
-}
-func UiThemeWithMode(t UiTheme, mode int) UiTheme {
+func UiThemeModeGet(t UiTheme) int  { return int(t.Theme.Mode) }
+func UiThemeModeSet(t UiTheme, mode int) UiTheme {
 	t.Theme.Mode = ui.ThemeMode(mode)
 	return t
 }
-
-// Theme field getters (all 22 semantic colors)
-func UiThemeBackground(t UiTheme) int         { return int(t.Theme.Background) }
-func UiThemeForeground(t UiTheme) int         { return int(t.Theme.Foreground) }
-func UiThemeSurface(t UiTheme) int            { return int(t.Theme.Surface) }
-func UiThemeSurfaceRaised(t UiTheme) int      { return int(t.Theme.SurfaceRaised) }
-func UiThemeSurfaceHovered(t UiTheme) int     { return int(t.Theme.SurfaceHovered) }
-func UiThemeSurfacePressed(t UiTheme) int     { return int(t.Theme.SurfacePressed) }
-func UiThemePrimary(t UiTheme) int            { return int(t.Theme.Primary) }
-func UiThemePrimaryText(t UiTheme) int        { return int(t.Theme.PrimaryText) }
-func UiThemePrimaryHovered(t UiTheme) int     { return int(t.Theme.PrimaryHovered) }
-func UiThemePrimaryPressed(t UiTheme) int     { return int(t.Theme.PrimaryPressed) }
-func UiThemeAccent(t UiTheme) int             { return int(t.Theme.Accent) }
-func UiThemeAccentText(t UiTheme) int         { return int(t.Theme.AccentText) }
-func UiThemeSuccess(t UiTheme) int            { return int(t.Theme.Success) }
-func UiThemeSuccessText(t UiTheme) int        { return int(t.Theme.SuccessText) }
-func UiThemeWarning(t UiTheme) int            { return int(t.Theme.Warning) }
-func UiThemeWarningText(t UiTheme) int        { return int(t.Theme.WarningText) }
-func UiThemeDanger(t UiTheme) int             { return int(t.Theme.Danger) }
-func UiThemeDangerText(t UiTheme) int         { return int(t.Theme.DangerText) }
-func UiThemeMutedForeground(t UiTheme) int    { return int(t.Theme.MutedForeground) }
-func UiThemeDisabledForeground(t UiTheme) int  { return int(t.Theme.DisabledForeground) }
-func UiThemeSelection(t UiTheme) int          { return int(t.Theme.Selection) }
-func UiThemeBorder(t UiTheme) int             { return int(t.Theme.Border) }
-func UiThemeMode(t UiTheme) int              { return int(t.Theme.Mode) }
 
 // UiThemePaletteScale returns the 11 generated tones (Tone50 .. Tone950)
 // for one color family of the theme's palette. The family argument is
@@ -897,14 +827,6 @@ type UiThemeSet struct {
 
 func UiThemeSetDefault() UiThemeSet {
 	return UiThemeSet{Set: ui.DefaultThemeSet()}
-}
-
-// UiRunWithThemeSet runs the app with both light + dark themes registered.
-// vaxis swaps between them in response to terminal ColorThemeUpdate events.
-func UiRunWithThemeSet(root ui.Widget, ts UiThemeSet) {
-	if err := ui.Run(root, ui.WithThemeSet(ts.Set)); err != nil {
-		panic(err)
-	}
 }
 
 // ─── Animation helpers ───────────────────────────────────────────────

@@ -1,9 +1,8 @@
 // ─── vaxis/ui bindings ────────────────────────────────────────────────
 // Thin Ard wrappers for git.sr.ht/~rockorager/vaxis/ui.
-//
-// Each widget constructor delegates to a Go FFI function in ffi/ui.go.
-// Closures are wrapped so Ard callbacks receive typed structs instead of
-// raw handles.
+
+use vaxis/vaxis
+use ard/maybe
 
 // ── Opaque handles ────────────────────────────────────────────────────
 
@@ -11,69 +10,97 @@ extern type Widget = "ui.Widget"
 extern type BuildContextHandle = "ui.BuildContext"
 extern type EventContextHandle = "ui.EventContext"
 extern type StateHandle = "any"
+extern type ActionBinding = "any"
 
 // ── Event result ──────────────────────────────────────────────────────
 
-enum EventResult {
-  ignored,
-  handled,
-}
+enum EventResult { ignored, handled }
 
 // ── Action binding (raw FFI) ──────────────────────────────────────────
 
-extern type ActionBinding = "any"
-
-extern fn _action_binding(name: Str, handler: fn(EventContextHandle, Str) Int) ActionBinding   = "NewUiActionBinding"
+extern fn _action_binding(name: Str, handler: fn(EventContextHandle, Str) Int) ActionBinding = "NewUiActionBinding"
 
 // ── Lifecycle ─────────────────────────────────────────────────────────
 
-// Top-level entry points. All `run*` wrappers return Void. If vaxis fails
-// to initialise the backend (rare; bad terminal), the Go side panics so the
-// error is loud rather than silently funnelled through a Result.
-extern fn _run(root: Widget) Void   = "UiRun"
-extern fn _run_themed(root: Widget, black: Int, red: Int, green: Int, yellow: Int, blue: Int, magenta: Int, cyan: Int, white: Int) Void   = "UiRunWithBaseColors"
-
-fn run(root: Widget) Void {
-  _run(root)
-}
-
-fn run_themed(root: Widget, black: Int, red: Int, green: Int, yellow: Int, blue: Int, magenta: Int, cyan: Int, white: Int) Void {
-  _run_themed(root, black, red, green, yellow, blue, magenta, cyan, white)
-}
+extern fn _run(root: Widget) Void = "UiRun"
+extern fn _run_with_theme_set(root: Widget, ts: ThemeSetHandle) Void = "UiRunWithThemeSet"
 
 // ── Event helpers ─────────────────────────────────────────────────────
 
-extern fn _quit(ctx: EventContextHandle) Void   = "UiQuit"
-extern fn _notify(ctx: EventContextHandle, title: Str, body: Str) Void   = "UiNotify"
-extern fn _set_title(ctx: EventContextHandle, title: Str) Void   = "UiSetTitle"
-extern fn _copy(ctx: EventContextHandle, text: Str) Void   = "UiCopy"
+extern fn _quit(ctx: EventContextHandle) Void = "UiQuit"
+extern fn _notify(ctx: EventContextHandle, title: Str, body: Str) Void = "UiNotify"
+extern fn _set_title(ctx: EventContextHandle, title: Str) Void = "UiSetTitle"
+extern fn _copy(ctx: EventContextHandle, text: Str) Void = "UiCopy"
 extern fn _toggle_profile_overlay(ctx: EventContextHandle) Void = "UiToggleProfileOverlay"
 
-struct EventContext {
-  handle: EventContextHandle,
-}
+struct EventContext { handle: EventContextHandle }
 
 fn quit(ctx: EventContext) { _quit(ctx.handle) }
 fn notify(ctx: EventContext, title: Str, body: Str) { _notify(ctx.handle, title, body) }
 fn set_title(ctx: EventContext, title: Str) { _set_title(ctx.handle, title) }
 fn copy(ctx: EventContext, text: Str) { _copy(ctx.handle, text) }
-// Toggles vaxis's built-in profiling overlay (frame timings + churn).
-// Intent name `vaxis.toggle-profile-overlay` is also registered by the
-// runtime, so callers can bind a key to that intent instead.
 fn toggle_profile_overlay(ctx: EventContext) { _toggle_profile_overlay(ctx.handle) }
 
-// vaxis-registered intent constant. Bind a shortcut to this string in
-// shortcuts(); the runtime will invoke the matching ctx method.
 fn toggle_profile_overlay_intent() Str { "vaxis.toggle-profile-overlay" }
 
 // ── Theme system ──────────────────────────────────────────────────────
 
-// Theme mirrors the semantic colors from vaxis/ui.Theme.
-// Use theme_default() to get the built-in dark theme, then mutate fields.
-// Palette is the generated color scale a Theme is derived from. Each
-// family is a 11-element list of tone ints (Tone50..Tone950). Palette
-// is read-only — vaxis regenerates it from base colors, so writing it
-// back through _theme_to_handle has no effect.
+extern type ThemeHandle = "ffi.UiTheme"
+
+extern fn _theme_default() ThemeHandle = "UiThemeDefault"
+extern fn _theme_light() ThemeHandle = "UiThemeLight"
+extern fn _theme_dark() ThemeHandle = "UiThemeDark"
+extern fn _must_have_theme(ctx: BuildContextHandle) ThemeHandle = "UiMustHaveTheme"
+extern fn _provider_theme(theme: ThemeHandle, child: Widget) Widget = "UiProviderTheme"
+
+// Collapsed read/write: all 22 semantic colors in a single FFI call each.
+extern fn _theme_colors(t: ThemeHandle) [Int] = "UiThemeColors"
+extern fn _theme_set_colors(t: ThemeHandle, colors: [Int]) ThemeHandle = "UiThemeSetColors"
+extern fn _theme_mode(t: ThemeHandle) Int = "UiThemeModeGet"
+extern fn _theme_set_mode(t: ThemeHandle, mode: Int) ThemeHandle = "UiThemeModeSet"
+
+extern fn _theme_palette_scale(t: ThemeHandle, family: Int) [Int] = "UiThemePaletteScale"
+
+enum PaletteFamily {
+  neutral,
+  red,
+  green,
+  yellow,
+  blue,
+  magenta,
+  cyan,
+}
+
+impl PaletteFamily {
+  fn to_int() Int {
+    match self {
+      PaletteFamily::neutral => 0,
+      PaletteFamily::red => 1,
+      PaletteFamily::green => 2,
+      PaletteFamily::yellow => 3,
+      PaletteFamily::blue => 4,
+      PaletteFamily::magenta => 5,
+      PaletteFamily::cyan => 6,
+    }
+  }
+}
+
+enum ThemeMode { dark, light }
+
+impl ThemeMode {
+  fn to_int() Int {
+    match self {
+      ThemeMode::dark => 0,
+      ThemeMode::light => 1,
+    }
+  }
+}
+
+fn theme_mode_from_int(v: Int) ThemeMode {
+  if v == 1 { ThemeMode::light }
+  else { ThemeMode::dark }
+}
+
 struct Palette {
   neutral: [Int],
   red: [Int],
@@ -85,261 +112,132 @@ struct Palette {
 }
 
 struct Theme {
-  background: Int,
-  foreground: Int,
-  surface: Int,
-  surface_raised: Int,
-  surface_hovered: Int,
-  surface_pressed: Int,
-  primary: Int,
-  primary_text: Int,
-  primary_hovered: Int,
-  primary_pressed: Int,
-  accent: Int,
-  accent_text: Int,
-  success: Int,
-  success_text: Int,
-  warning: Int,
-  warning_text: Int,
-  danger: Int,
-  danger_text: Int,
-  muted_foreground: Int,
-  disabled_foreground: Int,
-  selection: Int,
-  border: Int,
-  mode: Int,
+  background: vaxis::Color,
+  foreground: vaxis::Color,
+  surface: vaxis::Color,
+  surface_raised: vaxis::Color,
+  surface_hovered: vaxis::Color,
+  surface_pressed: vaxis::Color,
+  primary: vaxis::Color,
+  primary_text: vaxis::Color,
+  primary_hovered: vaxis::Color,
+  primary_pressed: vaxis::Color,
+  accent: vaxis::Color,
+  accent_text: vaxis::Color,
+  success: vaxis::Color,
+  success_text: vaxis::Color,
+  warning: vaxis::Color,
+  warning_text: vaxis::Color,
+  danger: vaxis::Color,
+  danger_text: vaxis::Color,
+  muted_foreground: vaxis::Color,
+  disabled_foreground: vaxis::Color,
+  selection: vaxis::Color,
+  border: vaxis::Color,
+  mode: ThemeMode,
   palette: Palette,
 }
 
-// Private Go FFI — used only to read/write the Go Theme struct.
-extern type ThemeHandle = "ffi.UiTheme"
-
-extern fn _theme_default() ThemeHandle = "UiThemeDefault"
-extern fn _theme_with_background(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithBackground"
-extern fn _theme_with_foreground(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithForeground"
-extern fn _theme_with_surface(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSurface"
-extern fn _theme_with_surface_raised(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSurfaceRaised"
-extern fn _theme_with_surface_hovered(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSurfaceHovered"
-extern fn _theme_with_surface_pressed(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSurfacePressed"
-extern fn _theme_with_primary(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithPrimary"
-extern fn _theme_with_primary_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithPrimaryText"
-extern fn _theme_with_primary_hovered(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithPrimaryHovered"
-extern fn _theme_with_primary_pressed(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithPrimaryPressed"
-extern fn _theme_with_accent(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithAccent"
-extern fn _theme_with_accent_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithAccentText"
-extern fn _theme_with_success(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSuccess"
-extern fn _theme_with_success_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSuccessText"
-extern fn _theme_with_warning(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithWarning"
-extern fn _theme_with_warning_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithWarningText"
-extern fn _theme_with_danger(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithDanger"
-extern fn _theme_with_danger_text(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithDangerText"
-extern fn _theme_with_muted_foreground(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithMutedForeground"
-extern fn _theme_with_disabled_foreground(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithDisabledForeground"
-extern fn _theme_with_selection(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithSelection"
-extern fn _theme_with_border(t: ThemeHandle, color: Int) ThemeHandle = "UiThemeWithBorder"
-extern fn _theme_with_mode(t: ThemeHandle, mode: Int) ThemeHandle = "UiThemeWithMode"
-extern fn _theme_background(t: ThemeHandle) Int = "UiThemeBackground"
-extern fn _theme_foreground(t: ThemeHandle) Int = "UiThemeForeground"
-extern fn _theme_surface(t: ThemeHandle) Int = "UiThemeSurface"
-extern fn _theme_surface_raised(t: ThemeHandle) Int = "UiThemeSurfaceRaised"
-extern fn _theme_surface_hovered(t: ThemeHandle) Int = "UiThemeSurfaceHovered"
-extern fn _theme_surface_pressed(t: ThemeHandle) Int = "UiThemeSurfacePressed"
-extern fn _theme_primary(t: ThemeHandle) Int = "UiThemePrimary"
-extern fn _theme_primary_text(t: ThemeHandle) Int = "UiThemePrimaryText"
-extern fn _theme_primary_hovered(t: ThemeHandle) Int = "UiThemePrimaryHovered"
-extern fn _theme_primary_pressed(t: ThemeHandle) Int = "UiThemePrimaryPressed"
-extern fn _theme_accent(t: ThemeHandle) Int = "UiThemeAccent"
-extern fn _theme_accent_text(t: ThemeHandle) Int = "UiThemeAccentText"
-extern fn _theme_success(t: ThemeHandle) Int = "UiThemeSuccess"
-extern fn _theme_success_text(t: ThemeHandle) Int = "UiThemeSuccessText"
-extern fn _theme_warning(t: ThemeHandle) Int = "UiThemeWarning"
-extern fn _theme_warning_text(t: ThemeHandle) Int = "UiThemeWarningText"
-extern fn _theme_danger(t: ThemeHandle) Int = "UiThemeDanger"
-extern fn _theme_danger_text(t: ThemeHandle) Int = "UiThemeDangerText"
-extern fn _theme_muted_foreground(t: ThemeHandle) Int = "UiThemeMutedForeground"
-extern fn _theme_disabled_foreground(t: ThemeHandle) Int = "UiThemeDisabledForeground"
-extern fn _theme_selection(t: ThemeHandle) Int = "UiThemeSelection"
-extern fn _theme_border(t: ThemeHandle) Int = "UiThemeBorder"
-extern fn _theme_mode(t: ThemeHandle) Int = "UiThemeMode"
-extern fn _theme_palette_scale(t: ThemeHandle, family: Int) [Int] = "UiThemePaletteScale"
-extern fn _theme_light() ThemeHandle = "UiThemeLight"
-extern fn _theme_dark() ThemeHandle = "UiThemeDark"
-extern fn _must_have_theme(ctx: BuildContextHandle) ThemeHandle = "UiMustHaveTheme"
-extern fn _provider_theme(theme: ThemeHandle, child: Widget) Widget = "UiProviderTheme"
-extern fn _run_with_theme(root: Widget, theme: ThemeHandle) Void = "UiRunWithTheme"
-
-// A ThemeSet bundles both light and dark Theme variants. When passed to
-// run_with_theme_set, vaxis swaps between them in response to terminal
-// ColorThemeUpdate events.
-extern type ThemeSetHandle = "ffi.UiThemeSet"
-extern fn _default_theme_set() ThemeSetHandle = "UiThemeSetDefault"
-extern fn _run_with_theme_set(root: Widget, ts: ThemeSetHandle) Void = "UiRunWithThemeSet"
-
-// Read a Go ThemeHandle into an Ard Theme struct.
 fn _theme_from_handle(h: ThemeHandle) Theme {
+  let colors = _theme_colors(h)
   let palette = Palette{
-    neutral: _theme_palette_scale(h, 0),
-    red:     _theme_palette_scale(h, 1),
-    green:   _theme_palette_scale(h, 2),
-    yellow:  _theme_palette_scale(h, 3),
-    blue:    _theme_palette_scale(h, 4),
-    magenta: _theme_palette_scale(h, 5),
-    cyan:    _theme_palette_scale(h, 6),
+    neutral: _theme_palette_scale(h, PaletteFamily::neutral.to_int()),
+    red:     _theme_palette_scale(h, PaletteFamily::red.to_int()),
+    green:   _theme_palette_scale(h, PaletteFamily::green.to_int()),
+    yellow:  _theme_palette_scale(h, PaletteFamily::yellow.to_int()),
+    blue:    _theme_palette_scale(h, PaletteFamily::blue.to_int()),
+    magenta: _theme_palette_scale(h, PaletteFamily::magenta.to_int()),
+    cyan:    _theme_palette_scale(h, PaletteFamily::cyan.to_int()),
   }
   Theme{
-    background: _theme_background(h),
-    foreground: _theme_foreground(h),
-    surface: _theme_surface(h),
-    surface_raised: _theme_surface_raised(h),
-    surface_hovered: _theme_surface_hovered(h),
-    surface_pressed: _theme_surface_pressed(h),
-    primary: _theme_primary(h),
-    primary_text: _theme_primary_text(h),
-    primary_hovered: _theme_primary_hovered(h),
-    primary_pressed: _theme_primary_pressed(h),
-    accent: _theme_accent(h),
-    accent_text: _theme_accent_text(h),
-    success: _theme_success(h),
-    success_text: _theme_success_text(h),
-    warning: _theme_warning(h),
-    warning_text: _theme_warning_text(h),
-    danger: _theme_danger(h),
-    danger_text: _theme_danger_text(h),
-    muted_foreground: _theme_muted_foreground(h),
-    disabled_foreground: _theme_disabled_foreground(h),
-    selection: _theme_selection(h),
-    border: _theme_border(h),
-    mode: _theme_mode(h),
+    background: vaxis::int_to_color(colors.at(0)),
+    foreground: vaxis::int_to_color(colors.at(1)),
+    surface: vaxis::int_to_color(colors.at(2)),
+    surface_raised: vaxis::int_to_color(colors.at(3)),
+    surface_hovered: vaxis::int_to_color(colors.at(4)),
+    surface_pressed: vaxis::int_to_color(colors.at(5)),
+    primary: vaxis::int_to_color(colors.at(6)),
+    primary_text: vaxis::int_to_color(colors.at(7)),
+    primary_hovered: vaxis::int_to_color(colors.at(8)),
+    primary_pressed: vaxis::int_to_color(colors.at(9)),
+    accent: vaxis::int_to_color(colors.at(10)),
+    accent_text: vaxis::int_to_color(colors.at(11)),
+    success: vaxis::int_to_color(colors.at(12)),
+    success_text: vaxis::int_to_color(colors.at(13)),
+    warning: vaxis::int_to_color(colors.at(14)),
+    warning_text: vaxis::int_to_color(colors.at(15)),
+    danger: vaxis::int_to_color(colors.at(16)),
+    danger_text: vaxis::int_to_color(colors.at(17)),
+    muted_foreground: vaxis::int_to_color(colors.at(18)),
+    disabled_foreground: vaxis::int_to_color(colors.at(19)),
+    selection: vaxis::int_to_color(colors.at(20)),
+    border: vaxis::int_to_color(colors.at(21)),
+    mode: theme_mode_from_int(_theme_mode(h)),
     palette: palette,
   }
 }
 
-// Write an Ard Theme struct back to a Go ThemeHandle.
 fn _theme_to_handle(theme: Theme) ThemeHandle {
   mut h = _theme_default()
-  h = _theme_with_background(h, theme.background)
-  h = _theme_with_foreground(h, theme.foreground)
-  h = _theme_with_surface(h, theme.surface)
-  h = _theme_with_surface_raised(h, theme.surface_raised)
-  h = _theme_with_surface_hovered(h, theme.surface_hovered)
-  h = _theme_with_surface_pressed(h, theme.surface_pressed)
-  h = _theme_with_primary(h, theme.primary)
-  h = _theme_with_primary_text(h, theme.primary_text)
-  h = _theme_with_primary_hovered(h, theme.primary_hovered)
-  h = _theme_with_primary_pressed(h, theme.primary_pressed)
-  h = _theme_with_accent(h, theme.accent)
-  h = _theme_with_accent_text(h, theme.accent_text)
-  h = _theme_with_success(h, theme.success)
-  h = _theme_with_success_text(h, theme.success_text)
-  h = _theme_with_warning(h, theme.warning)
-  h = _theme_with_warning_text(h, theme.warning_text)
-  h = _theme_with_danger(h, theme.danger)
-  h = _theme_with_danger_text(h, theme.danger_text)
-  h = _theme_with_muted_foreground(h, theme.muted_foreground)
-  h = _theme_with_disabled_foreground(h, theme.disabled_foreground)
-  h = _theme_with_selection(h, theme.selection)
-  h = _theme_with_border(h, theme.border)
-  h = _theme_with_mode(h, theme.mode)
-  h
+  let colors = [
+    vaxis::color_to_int(theme.background),
+    vaxis::color_to_int(theme.foreground),
+    vaxis::color_to_int(theme.surface),
+    vaxis::color_to_int(theme.surface_raised),
+    vaxis::color_to_int(theme.surface_hovered),
+    vaxis::color_to_int(theme.surface_pressed),
+    vaxis::color_to_int(theme.primary),
+    vaxis::color_to_int(theme.primary_text),
+    vaxis::color_to_int(theme.primary_hovered),
+    vaxis::color_to_int(theme.primary_pressed),
+    vaxis::color_to_int(theme.accent),
+    vaxis::color_to_int(theme.accent_text),
+    vaxis::color_to_int(theme.success),
+    vaxis::color_to_int(theme.success_text),
+    vaxis::color_to_int(theme.warning),
+    vaxis::color_to_int(theme.warning_text),
+    vaxis::color_to_int(theme.danger),
+    vaxis::color_to_int(theme.danger_text),
+    vaxis::color_to_int(theme.muted_foreground),
+    vaxis::color_to_int(theme.disabled_foreground),
+    vaxis::color_to_int(theme.selection),
+    vaxis::color_to_int(theme.border),
+  ]
+  h = _theme_set_colors(h, colors)
+  _theme_set_mode(h, theme.mode.to_int())
 }
 
-fn theme_default() Theme {
-  _theme_from_handle(_theme_default())
-}
+fn theme_default() Theme { _theme_from_handle(_theme_default()) }
+fn theme_light() Theme { _theme_from_handle(_theme_light()) }
+fn theme_dark() Theme { _theme_from_handle(_theme_dark()) }
+fn must_have_theme(ctx: BuildContext) Theme { _theme_from_handle(_must_have_theme(ctx.handle)) }
+fn provider_theme(theme: Theme, child: Widget) Widget { _provider_theme(_theme_to_handle(theme), child) }
 
-fn theme_light() Theme {
-  _theme_from_handle(_theme_light())
-}
+extern type ThemeSetHandle = "ffi.UiThemeSet"
+extern fn _default_theme_set() ThemeSetHandle = "UiThemeSetDefault"
 
-fn theme_dark() Theme {
-  _theme_from_handle(_theme_dark())
-}
-
-fn must_have_theme(ctx: BuildContext) Theme {
-  _theme_from_handle(_must_have_theme(ctx.handle))
-}
-
-fn provider_theme(theme: Theme, child: Widget) Widget {
-  _provider_theme(_theme_to_handle(theme), child)
-}
-
-fn run_with_theme(root: Widget, theme: Theme) Void {
-  _run_with_theme(root, _theme_to_handle(theme))
-}
-
-// ThemeSet: a (light, dark) Theme pair that vaxis swaps between in
-// response to terminal ColorThemeUpdate events.
 struct ThemeSet {
   handle: ThemeSetHandle,
 }
 
 fn default_theme_set() ThemeSet {
-  ThemeSet{handle: _default_theme_set()}
+  ThemeSet{ handle: _default_theme_set() }
 }
 
-fn run_with_theme_set(root: Widget, ts: ThemeSet) Void {
-  _run_with_theme_set(root, ts.handle)
-}
-
-fn build_theme(
-  background: Int?,
-  foreground: Int?,
-  surface: Int?,
-  surface_raised: Int?,
-  surface_hovered: Int?,
-  surface_pressed: Int?,
-  primary: Int?,
-  primary_text: Int?,
-  primary_hovered: Int?,
-  primary_pressed: Int?,
-  accent: Int?,
-  accent_text: Int?,
-  success: Int?,
-  success_text: Int?,
-  warning: Int?,
-  warning_text: Int?,
-  danger: Int?,
-  danger_text: Int?,
-  muted_foreground: Int?,
-  disabled_foreground: Int?,
-  selection: Int?,
-  border: Int?,
-  mode: Int?,
-) Theme {
-  mut theme = theme_default()
-  if background.is_some() { theme.background = background }
-  if foreground.is_some() { theme.foreground = foreground }
-  if surface.is_some() { theme.surface = surface }
-  if surface_raised.is_some() { theme.surface_raised = surface_raised }
-  if surface_hovered.is_some() { theme.surface_hovered = surface_hovered }
-  if surface_pressed.is_some() { theme.surface_pressed = surface_pressed }
-  if primary.is_some() { theme.primary = primary }
-  if primary_text.is_some() { theme.primary_text = primary_text }
-  if primary_hovered.is_some() { theme.primary_hovered = primary_hovered }
-  if primary_pressed.is_some() { theme.primary_pressed = primary_pressed }
-  if accent.is_some() { theme.accent = accent }
-  if accent_text.is_some() { theme.accent_text = accent_text }
-  if success.is_some() { theme.success = success }
-  if success_text.is_some() { theme.success_text = success_text }
-  if warning.is_some() { theme.warning = warning }
-  if warning_text.is_some() { theme.warning_text = warning_text }
-  if danger.is_some() { theme.danger = danger }
-  if danger_text.is_some() { theme.danger_text = danger_text }
-  if muted_foreground.is_some() { theme.muted_foreground = muted_foreground }
-  if disabled_foreground.is_some() { theme.disabled_foreground = disabled_foreground }
-  if selection.is_some() { theme.selection = selection }
-  if border.is_some() { theme.border = border }
-  if mode.is_some() { theme.mode = mode }
-  theme
+fn run(root: Widget, theme_set: ThemeSet?) {
+  match theme_set {
+    t => _run_with_theme_set(root, t.handle),
+    _ => _run(root),
+  }
 }
 
 // ── Layout widgets ────────────────────────────────────────────────────
 
-extern fn _center(child: Widget) Widget   = "UiCenter"
-extern fn _padding(all: Int, child: Widget) Widget   = "UiPadding"
-extern fn _expanded(child: Widget) Widget   = "UiExpanded"
+extern fn _center(child: Widget) Widget = "UiCenter"
+extern fn _padding(all: Int, child: Widget) Widget = "UiPadding"
+extern fn _expanded(child: Widget) Widget = "UiExpanded"
 extern fn _flexible(flex: Int, child: Widget) Widget = "UiFlexible"
-extern fn _sized_box(width: Int, height: Int, child: Widget) Widget   = "UiSizedBox"
+extern fn _sized_box(width: Int, height: Int, child: Widget) Widget = "UiSizedBox"
 
 fn center(child: Widget) Widget { _center(child) }
 fn padding(all: Int, child: Widget) Widget { _padding(all, child) }
@@ -348,36 +246,11 @@ fn flexible(flex: Int, child: Widget) Widget { _flexible(flex, child) }
 fn sized_box(width: Int, height: Int, child: Widget) Widget { _sized_box(width, height, child) }
 
 // ── Flex ──────────────────────────────────────────────────────────────
-//
-// row / column / flex take optional layout knobs as typed enums.
-// Defaults match vaxis zero values, except `column` defaults to
-// CrossAlign::stretch (TUI columns almost always want stretched children).
 
-enum Axis {
-  horizontal,
-  vertical,
-}
-
-enum MainSize {
-  max,
-  min,
-}
-
-enum MainAlign {
-  start,
-  end,
-  center,
-  between,
-  around,
-  evenly,
-}
-
-enum CrossAlign {
-  center,
-  start,
-  end,
-  stretch,
-}
+enum Axis { horizontal, vertical }
+enum MainSize { max, min }
+enum MainAlign { start, end, center, between, around, evenly }
+enum CrossAlign { center, start, end, stretch }
 
 impl Axis {
   fn to_int() Int {
@@ -400,12 +273,9 @@ impl MainSize {
 impl MainAlign {
   fn to_int() Int {
     match self {
-      MainAlign::start => 0,
-      MainAlign::end => 1,
-      MainAlign::center => 2,
-      MainAlign::between => 3,
-      MainAlign::around => 4,
-      MainAlign::evenly => 5,
+      MainAlign::start => 0, MainAlign::end => 1,
+      MainAlign::center => 2, MainAlign::between => 3,
+      MainAlign::around => 4, MainAlign::evenly => 5,
     }
   }
 }
@@ -413,10 +283,8 @@ impl MainAlign {
 impl CrossAlign {
   fn to_int() Int {
     match self {
-      CrossAlign::center => 0,
-      CrossAlign::start => 1,
-      CrossAlign::end => 2,
-      CrossAlign::stretch => 3,
+      CrossAlign::center => 0, CrossAlign::start => 1,
+      CrossAlign::end => 2, CrossAlign::stretch => 3,
     }
   }
 }
@@ -424,58 +292,49 @@ impl CrossAlign {
 extern fn _flex(axis: Int, main_size: Int, main_align: Int, cross_align: Int, children: [Widget]) Widget = "UiFlex"
 
 fn row(
-  children: [Widget],
-  main_align: MainAlign?,
-  cross_align: CrossAlign?,
-  main_size: MainSize?,
+  children: [Widget], main_align: MainAlign?, cross_align: CrossAlign?, main_size: MainSize?,
 ) Widget {
-  _flex(
-    Axis::horizontal.to_int(),
-    main_size.or(MainSize::max).to_int(),
-    main_align.or(MainAlign::start).to_int(),
-    cross_align.or(CrossAlign::center).to_int(),
-    children,
-  )
+  _flex(Axis::horizontal.to_int(), main_size.or(MainSize::max).to_int(),
+    main_align.or(MainAlign::start).to_int(), cross_align.or(CrossAlign::center).to_int(), children)
 }
 
 fn column(
-  children: [Widget],
-  main_align: MainAlign?,
-  cross_align: CrossAlign?,
-  main_size: MainSize?,
+  children: [Widget], main_align: MainAlign?, cross_align: CrossAlign?, main_size: MainSize?,
 ) Widget {
-  _flex(
-    Axis::vertical.to_int(),
-    main_size.or(MainSize::max).to_int(),
-    main_align.or(MainAlign::start).to_int(),
-    cross_align.or(CrossAlign::stretch).to_int(),
-    children,
-  )
+  _flex(Axis::vertical.to_int(), main_size.or(MainSize::max).to_int(),
+    main_align.or(MainAlign::start).to_int(), cross_align.or(CrossAlign::stretch).to_int(), children)
 }
 
 fn flex(
-  axis: Axis,
-  children: [Widget],
-  main_align: MainAlign?,
-  cross_align: CrossAlign?,
-  main_size: MainSize?,
+  axis: Axis, children: [Widget], main_align: MainAlign?, cross_align: CrossAlign?, main_size: MainSize?,
 ) Widget {
-  _flex(
-    axis.to_int(),
-    main_size.or(MainSize::max).to_int(),
-    main_align.or(MainAlign::start).to_int(),
-    cross_align.or(CrossAlign::center).to_int(),
-    children,
-  )
+  _flex(axis.to_int(), main_size.or(MainSize::max).to_int(),
+    main_align.or(MainAlign::start).to_int(), cross_align.or(CrossAlign::center).to_int(), children)
 }
 
 // ── Positioned ────────────────────────────────────────────────────────
 
 extern fn _positioned(left: Int, top: Int, child: Widget) Widget = "UiPositioned"
 
-fn positioned(left: Int, top: Int, child: Widget) Widget {
-  _positioned(left, top, child)
+fn positioned(left: Int, top: Int, child: Widget) Widget { _positioned(left, top, child) }
+
+// ── Borders ───────────────────────────────────────────────────────────
+
+struct Borders {
+  top: Bool?,
+  right: Bool?,
+  bottom: Bool?,
+  left: Bool?,
 }
+
+fn borders_all() Borders {
+  Borders{ top: true, right: true, bottom: true, left: true }
+}
+
+fn _border_top(b: Borders?) Bool { b.or(Borders{}).top.or(false) }
+fn _border_right(b: Borders?) Bool { b.or(Borders{}).right.or(false) }
+fn _border_bottom(b: Borders?) Bool { b.or(Borders{}).bottom.or(false) }
+fn _border_left(b: Borders?) Bool { b.or(Borders{}).left.or(false) }
 
 // ── DecoratedBox ──────────────────────────────────────────────────────
 
@@ -485,60 +344,33 @@ extern fn _decorated_box(
   child: Widget,
 ) Widget = "UiDecoratedBox"
 
-// TextAttrs bundles vaxis attribute-mask flags as typed Bool fields.
-// Used everywhere attrs cross the public API (span, styled_text,
-// decorated_box, bordered_box). Each field is nullable so callers can
-// opt into just the ones they need: `TextAttrs{bold: true}`,
-// `TextAttrs{bold: true, italic: true}`, etc. Auto-wrap of struct
-// fields means callers never write maybe::some(true).
 struct TextAttrs {
-  bold: Bool?,
-  dim: Bool?,
-  italic: Bool?,
-  blink: Bool?,
-  reverse: Bool?,
-  invisible: Bool?,
-  strikethrough: Bool?,
+  bold: Bool?, dim: Bool?, italic: Bool?, blink: Bool?,
+  reverse: Bool?, invisible: Bool?, strikethrough: Bool?,
 }
 
-// TextAttrFlag mirrors the individual bits of vaxis.AttributeMask.
-// The bit values live only inside `::to_int()` — the public API uses
-// the typed enum, never a raw Int.
-enum TextAttrFlag {
-  bold,
-  dim,
-  italic,
-  blink,
-  reverse,
-  invisible,
-  strikethrough,
-}
+enum TextAttrFlag { bold, dim, italic, blink, reverse, invisible, strikethrough }
 
 impl TextAttrFlag {
   fn to_int() Int {
     match self {
-      TextAttrFlag::bold          => 1,
-      TextAttrFlag::dim           => 2,
-      TextAttrFlag::italic        => 4,
-      TextAttrFlag::blink         => 8,
-      TextAttrFlag::reverse       => 16,
-      TextAttrFlag::invisible     => 32,
+      TextAttrFlag::bold => 1, TextAttrFlag::dim => 2,
+      TextAttrFlag::italic => 4, TextAttrFlag::blink => 8,
+      TextAttrFlag::reverse => 16, TextAttrFlag::invisible => 32,
       TextAttrFlag::strikethrough => 64,
     }
   }
 }
 
 impl TextAttrs {
-  // OR the set flags into a vaxis attribute bitmask. Flag bits are
-  // non-overlapping powers of two, so `+` is a correct OR (AGENTS.md).
   fn to_int() Int {
     mut bits = 0
-    if self.bold.or(false)          { bits = bits + TextAttrFlag::bold.to_int() }
-    if self.dim.or(false)           { bits = bits + TextAttrFlag::dim.to_int() }
-    if self.italic.or(false)        { bits = bits + TextAttrFlag::italic.to_int() }
-    if self.blink.or(false)         { bits = bits + TextAttrFlag::blink.to_int() }
-    if self.reverse.or(false)       { bits = bits + TextAttrFlag::reverse.to_int() }
-    if self.invisible.or(false)     { bits = bits + TextAttrFlag::invisible.to_int() }
+    if self.bold.or(false) { bits = bits + TextAttrFlag::bold.to_int() }
+    if self.dim.or(false) { bits = bits + TextAttrFlag::dim.to_int() }
+    if self.italic.or(false) { bits = bits + TextAttrFlag::italic.to_int() }
+    if self.blink.or(false) { bits = bits + TextAttrFlag::blink.to_int() }
+    if self.reverse.or(false) { bits = bits + TextAttrFlag::reverse.to_int() }
+    if self.invisible.or(false) { bits = bits + TextAttrFlag::invisible.to_int() }
     if self.strikethrough.or(false) { bits = bits + TextAttrFlag::strikethrough.to_int() }
     bits
   }
@@ -546,66 +378,50 @@ impl TextAttrs {
 
 fn decorated_box(
   child: Widget,
-  fg: Int?,
-  bg: Int?,
+  fg: vaxis::Color?,
+  bg: vaxis::Color?,
   attrs: TextAttrs?,
+  border: Borders?,
 ) Widget {
-  _decorated_box(fg.or(-1), bg.or(-1), -1, 0, attrs.or(TextAttrs{}).to_int(), false, false, false, false, child)
+  _decorated_box(
+    vaxis::color_to_int(fg.or(vaxis::COLOR_DEFAULT)),
+    vaxis::color_to_int(bg.or(vaxis::COLOR_DEFAULT)),
+    -1, 0, attrs.or(TextAttrs{}).to_int(),
+    _border_top(border), _border_right(border), _border_bottom(border), _border_left(border),
+    child,
+  )
 }
 
 fn bordered_box(
   child: Widget,
-  fg: Int?,
-  bg: Int?,
+  fg: vaxis::Color?,
+  bg: vaxis::Color?,
   attrs: TextAttrs?,
 ) Widget {
-  _decorated_box(fg.or(-1), bg.or(-1), -1, 0, attrs.or(TextAttrs{}).to_int(), true, true, true, true, child)
+  decorated_box(child, fg, bg, attrs, borders_all())
 }
 
 // ── Align ─────────────────────────────────────────────────────────────
 
-// vaxis Alignment is { X, Y int } where each is -1 / 0 / 1. The 9
-// named cardinal combinations are exposed as enum variants; map to
-// (x, y) at the FFI boundary.
-
 enum Alignment {
-  top_left,
-  top_center,
-  top_right,
-  center_left,
-  center,
-  center_right,
-  bottom_left,
-  bottom_center,
-  bottom_right,
+  top_left, top_center, top_right,
+  center_left, center, center_right,
+  bottom_left, bottom_center, bottom_right,
 }
 
 impl Alignment {
   fn to_x() Int {
     match self {
-      Alignment::top_left      => -1,
-      Alignment::top_center    => 0,
-      Alignment::top_right     => 1,
-      Alignment::center_left   => -1,
-      Alignment::center        => 0,
-      Alignment::center_right  => 1,
-      Alignment::bottom_left   => -1,
-      Alignment::bottom_center => 0,
-      Alignment::bottom_right  => 1,
+      Alignment::top_left => -1, Alignment::top_center => 0, Alignment::top_right => 1,
+      Alignment::center_left => -1, Alignment::center => 0, Alignment::center_right => 1,
+      Alignment::bottom_left => -1, Alignment::bottom_center => 0, Alignment::bottom_right => 1,
     }
   }
-
   fn to_y() Int {
     match self {
-      Alignment::top_left      => -1,
-      Alignment::top_center    => -1,
-      Alignment::top_right     => -1,
-      Alignment::center_left   => 0,
-      Alignment::center        => 0,
-      Alignment::center_right  => 0,
-      Alignment::bottom_left   => 1,
-      Alignment::bottom_center => 1,
-      Alignment::bottom_right  => 1,
+      Alignment::top_left => -1, Alignment::top_center => -1, Alignment::top_right => -1,
+      Alignment::center_left => 0, Alignment::center => 0, Alignment::center_right => 0,
+      Alignment::bottom_left => 1, Alignment::bottom_center => 1, Alignment::bottom_right => 1,
     }
   }
 }
@@ -619,32 +435,10 @@ fn align(child: Widget, alignment: Alignment?) Widget {
 
 // ── ConstrainedBox ────────────────────────────────────────────────────
 
-// All four bounds default to 0 (= no constraint). vaxis normalizes a
-// max of 0 to Unbounded internally, so omitted args produce a passthrough
-// box. Set only the dimensions you care about.
+extern fn _constrained_box(child: Widget, min_w: Int, max_w: Int, min_h: Int, max_h: Int) Widget = "UiConstrainedBox"
 
-extern fn _constrained_box(
-  child: Widget,
-  min_w: Int,
-  max_w: Int,
-  min_h: Int,
-  max_h: Int,
-) Widget = "UiConstrainedBox"
-
-fn constrained_box(
-  child: Widget,
-  min_w: Int?,
-  max_w: Int?,
-  min_h: Int?,
-  max_h: Int?,
-) Widget {
-  _constrained_box(
-    child,
-    min_w.or(0),
-    max_w.or(0),
-    min_h.or(0),
-    max_h.or(0),
-  )
+fn constrained_box(child: Widget, min_w: Int?, max_w: Int?, min_h: Int?, max_h: Int?) Widget {
+  _constrained_box(child, min_w.or(0), max_w.or(0), min_h.or(0), max_h.or(0))
 }
 
 // ── Stack ─────────────────────────────────────────────────────────────
@@ -661,26 +455,22 @@ fn stack(children: [Widget], alignment: Alignment?) Widget {
 extern fn _dialog(title: Str, child: Widget, actions: [Widget], width: Int, on_dismiss: fn(EventContextHandle)) Widget = "UiDialog"
 
 fn dialog(title: Str, child: Widget, actions: [Widget], width: Int, on_dismiss: fn(EventContext)) Widget {
-  _dialog(
-    title, child, actions, width,
-    fn(ctx: EventContextHandle) { on_dismiss(EventContext{handle: ctx}) },
-  )
+  _dialog(title, child, actions, width,
+    fn(ctx: EventContextHandle) { on_dismiss(EventContext{handle: ctx}) })
 }
 
 // ── ModalBarrier ──────────────────────────────────────────────────────
 
 extern fn _modal_barrier(fg: Int, bg: Int, ul_color: Int, ul_style: Int, attrs: Int, opacity: Int) Widget = "UiModalBarrier"
 
-fn modal_barrier(bg: Int, opacity: Int) Widget {
-  _modal_barrier(-1, bg, -1, 0, 0, opacity)
+fn modal_barrier(bg: vaxis::Color, opacity: Int) Widget {
+  _modal_barrier(-1, vaxis::color_to_int(bg), -1, 0, 0, opacity)
 }
 
 // ── ListTile ──────────────────────────────────────────────────────────
 
 extern fn _list_tile(
-  title: Widget,
-  selected: Bool,
-  disabled: Bool,
+  title: Widget, selected: Bool, disabled: Bool,
   has_leading: Bool, leading: Widget,
   has_subtitle: Bool, subtitle: Widget,
   has_trailing: Bool, trailing: Widget,
@@ -688,35 +478,17 @@ extern fn _list_tile(
 ) Widget = "UiListTile"
 
 fn list_tile(
-  title: Widget,
-  leading: Widget?,
-  subtitle: Widget?,
-  trailing: Widget?,
-  selected: Bool?,
-  disabled: Bool?,
-  on_pressed: fn(EventContext)?,
+  title: Widget, leading: Widget?, subtitle: Widget?, trailing: Widget?,
+  selected: Bool?, disabled: Bool?, on_pressed: fn(EventContext)?,
 ) Widget {
-  let has_l = leading.is_some()
-  let has_s = subtitle.is_some()
-  let has_t = trailing.is_some()
-  let has_p = on_pressed.is_some()
-  // When a slot isn't set we still need to pass *some* widget across the
-  // FFI; reuse `title` as a harmless filler — the Go side ignores it when
-  // the corresponding has_* flag is false.
-  let l = leading.or(title)
-  let s = subtitle.or(title)
-  let t = trailing.or(title)
+  let filler = title
   let p = on_pressed.or(fn(_c: EventContext) {})
-  _list_tile(
-    title,
-    selected.or(false),
-    disabled.or(false),
-    has_l, l,
-    has_s, s,
-    has_t, t,
-    has_p,
-    fn(ctx: EventContextHandle) { p(EventContext{handle: ctx}) },
-  )
+  _list_tile(title, selected.or(false), disabled.or(false),
+    leading.is_some(), leading.or(filler),
+    subtitle.is_some(), subtitle.or(filler),
+    trailing.is_some(), trailing.or(filler),
+    on_pressed.is_some(),
+    fn(ctx: EventContextHandle) { p(EventContext{handle: ctx}) })
 }
 
 // ── Overlay ───────────────────────────────────────────────────────────
@@ -730,9 +502,7 @@ fn overlay_entry(child: Widget, modal: Bool, align_x: Int, align_y: Int) Overlay
   _overlay_entry(child, modal, align_x, align_y)
 }
 
-fn overlay(child: Widget, entries: [OverlayEntry]) Widget {
-  _overlay(child, entries)
-}
+fn overlay(child: Widget, entries: [OverlayEntry]) Widget { _overlay(child, entries) }
 
 fn overlay_modal(child: Widget, modal_child: Widget) Widget {
   _overlay(child, [_overlay_entry(modal_child, true, 0, 0)])
@@ -747,7 +517,9 @@ fn selection_area(child: Widget) Widget { _selection_area(child) }
 fn selection_container(child: Widget, disabled: Bool?) Widget {
   mut d = false
   match disabled {
-    v => { d = v },
+    v => {
+      d = v
+    },
     _ => {},
   }
   _selection_container(child, d)
@@ -758,67 +530,29 @@ fn selection_container(child: Widget, disabled: Bool?) Widget {
 extern type CmdItem = "ffi.UiCommandPaletteItem"
 
 extern fn _command_palette(
-  items: [CmdItem],
-  placeholder: Str,
-  empty_text: Str,
-  width: Int,
-  max_visible_rows: Int,
+  items: [CmdItem], placeholder: Str, empty_text: Str, width: Int, max_visible_rows: Int,
   has_on_dismiss: Bool, on_dismiss: fn(EventContextHandle),
   has_on_selected: Bool, on_selected: fn(EventContextHandle, Str),
 ) Widget = "UiCommandPalette"
-extern fn _cmd_item(
-  title: Str,
-  description: Str,
-  aliases: [Str],
-  has_on_selected: Bool,
-  on_selected: fn(EventContextHandle),
-) CmdItem = "UiMakeCmdItem"
+extern fn _cmd_item(title: Str, description: Str, aliases: [Str], has_on_selected: Bool, on_selected: fn(EventContextHandle)) CmdItem = "UiMakeCmdItem"
 
-// title is required. description, aliases, and on_selected are all
-// optional. on_selected is the per-item activation callback (matches
-// vaxis CommandPaletteItem.OnSelected); the palette's overall
-// on_selected (passed to command_palette) fires after this one.
 fn cmd_item(
-  title: Str,
-  description: Str?,
-  aliases: [Str]?,
-  on_selected: fn(EventContext)?,
+  title: Str, description: Str?, aliases: [Str]?, on_selected: fn(EventContext)?,
 ) CmdItem {
-  let has_cb = on_selected.is_some()
   let cb = on_selected.or(fn(_c: EventContext) {})
-  _cmd_item(
-    title,
-    description.or(""),
-    aliases.or([]),
-    has_cb,
-    fn(ctx: EventContextHandle) { cb(EventContext{handle: ctx}) },
-  )
+  _cmd_item(title, description.or(""), aliases.or([]), on_selected.is_some(),
+    fn(ctx: EventContextHandle) { cb(EventContext{handle: ctx}) })
 }
 
 fn command_palette(
-  items: [CmdItem],
-  placeholder: Str?,
-  empty_text: Str?,
-  width: Int?,
-  max_visible_rows: Int?,
-  on_dismiss: fn(EventContext)?,
-  on_selected: fn(EventContext, Str)?,
+  items: [CmdItem], placeholder: Str?, empty_text: Str?, width: Int?, max_visible_rows: Int?,
+  on_dismiss: fn(EventContext)?, on_selected: fn(EventContext, Str)?,
 ) Widget {
-  let has_dismiss = on_dismiss.is_some()
-  let dismiss_cb = on_dismiss.or(fn(_c: EventContext) {})
-  let has_select = on_selected.is_some()
-  let select_cb = on_selected.or(fn(_c: EventContext, _t: Str) {})
-  _command_palette(
-    items,
-    placeholder.or(""),
-    empty_text.or(""),
-    width.or(0),
-    max_visible_rows.or(0),
-    has_dismiss,
-    fn(ctx: EventContextHandle) { dismiss_cb(EventContext{handle: ctx}) },
-    has_select,
-    fn(ctx: EventContextHandle, title: Str) { select_cb(EventContext{handle: ctx}, title) },
-  )
+  let dc = on_dismiss.or(fn(_c: EventContext) {})
+  let sc = on_selected.or(fn(_c: EventContext, _t: Str) {})
+  _command_palette(items, placeholder.or(""), empty_text.or(""), width.or(0), max_visible_rows.or(0),
+    on_dismiss.is_some(), fn(ctx: EventContextHandle) { dc(EventContext{handle: ctx}) },
+    on_selected.is_some(), fn(ctx: EventContextHandle, title: Str) { sc(EventContext{handle: ctx}, title) })
 }
 
 // ── Table ─────────────────────────────────────────────────────────────
@@ -843,18 +577,34 @@ fn table(columns: [TableColumn], column_gap: Int, row_gap: Int, rows: [TableRow]
 
 // ── Cursor ────────────────────────────────────────────────────────────
 
+enum CursorShape {
+  default,
+  block_blinking,
+  block,
+  underline_blinking,
+  underline,
+  beam_blinking,
+  beam,
+}
+
+impl CursorShape {
+  fn to_int() Int {
+    match self {
+      CursorShape::default => 0,
+      CursorShape::block_blinking => 1,
+      CursorShape::block => 2,
+      CursorShape::underline_blinking => 3,
+      CursorShape::underline => 4,
+      CursorShape::beam_blinking => 5,
+      CursorShape::beam => 6,
+    }
+  }
+}
+
 extern fn _cursor(col: Int, row: Int, shape: Int, hidden: Bool, child: Widget) Widget = "UiCursor"
 
-let CURSOR_DEFAULT = 0
-let CURSOR_BLOCK_BLINKING = 1
-let CURSOR_BLOCK = 2
-let CURSOR_UNDERLINE_BLINKING = 3
-let CURSOR_UNDERLINE = 4
-let CURSOR_BEAM_BLINKING = 5
-let CURSOR_BEAM = 6
-
-fn cursor(col: Int, row: Int, shape: Int, hidden: Bool, child: Widget) Widget {
-  _cursor(col, row, shape, hidden, child)
+fn cursor(col: Int, row: Int, shape: CursorShape?, hidden: Bool?, child: Widget) Widget {
+  _cursor(col, row, shape.or(CursorShape::default).to_int(), hidden.or(false), child)
 }
 
 // ── Animation ─────────────────────────────────────────────────────────
@@ -868,48 +618,28 @@ extern fn _anim_stop(ctrl: AnimationController) Void = "UiAnimStop"
 extern fn _anim_value(ctrl: AnimationController) Float = "UiAnimValue"
 extern fn _anim_status(ctrl: AnimationController) Int = "UiAnimStatus"
 
-// Float-to-Int workaround: Ard compiler <= v0.23.0 lacks the AIR lowering
-// for `Float.to_int()`. Drop this once the upstream fix ships.
 extern fn float_to_int(f: Float) Int = "UiFloatToInt"
 
-enum AnimationCurve {
-  linear,
-  ease_in_out,
-}
+enum AnimationCurve { linear, ease_in_out }
 
 impl AnimationCurve {
   fn to_int() Int {
     match self {
-      AnimationCurve::linear      => 0,
+      AnimationCurve::linear => 0,
       AnimationCurve::ease_in_out => 1,
     }
   }
 }
 
-enum AnimationStatus {
-  idle,
-  forward,
-  completed,
-}
+enum AnimationStatus { idle, forward, completed }
 
-// AnimationStatus has no `to_int` (we never write it back) — only a
-// constructor from the FFI int. Free function because Ard's `::`
-// syntax is for enum variants, not static methods.
 fn _animation_status_from_int(value: Int) AnimationStatus {
   if value == 1 { AnimationStatus::forward }
   else if value == 2 { AnimationStatus::completed }
   else { AnimationStatus::idle }
 }
 
-// animation_controller must be created inside `init` (or later in `build`)
-// where ctx.state is set — it needs the underlying StateBase to register
-// the controller with the element's animation list. Calling it elsewhere
-// will panic at the FFI boundary.
-fn animation_controller(
-  ctx: BuildContext,
-  duration_ms: Int,
-  curve: AnimationCurve?,
-) AnimationController {
+fn animation_controller(ctx: BuildContext, duration_ms: Int, curve: AnimationCurve?) AnimationController {
   let handle = ctx.state.expect("animation_controller requires a stateful BuildContext")
   _anim_new(handle, duration_ms, curve.or(AnimationCurve::linear).to_int())
 }
@@ -925,31 +655,22 @@ fn anim_status(ctrl: AnimationController) AnimationStatus {
 // ── ProgressBar ───────────────────────────────────────────────────────
 
 extern fn _progress_bar(
-  value: Float,
-  width: Int,
+  value: Float, width: Int,
   filled_fg: Int, filled_bg: Int, filled_attrs: Int,
   empty_fg: Int, empty_bg: Int, empty_attrs: Int,
   gradient_start: Int, gradient_end: Int,
 ) Widget = "UiProgressBar"
 
-// Pass gradient_start / gradient_end for a gradient-filled bar; vaxis
-// interpolates the fill across them. Otherwise solid filled_bg / empty_bg
-// (or theme defaults if -1).
 fn progress_bar(
-  value: Float,
-  width: Int,
-  filled_bg: Int?,
-  empty_bg: Int?,
-  gradient_start: Int?,
-  gradient_end: Int?,
+  value: Float, width: Int,
+  filled_bg: vaxis::Color?, empty_bg: vaxis::Color?,
+  gradient_start: vaxis::Color?, gradient_end: vaxis::Color?,
 ) Widget {
-  _progress_bar(
-    value, width,
-    -1, filled_bg.or(-1), 0,
-    -1, empty_bg.or(-1), 0,
-    gradient_start.or(-1),
-    gradient_end.or(-1),
-  )
+  _progress_bar(value, width,
+    -1, vaxis::color_to_int(filled_bg.or(vaxis::COLOR_DEFAULT)), 0,
+    -1, vaxis::color_to_int(empty_bg.or(vaxis::COLOR_DEFAULT)), 0,
+    vaxis::color_to_int(gradient_start.or(vaxis::COLOR_DEFAULT)),
+    vaxis::color_to_int(gradient_end.or(vaxis::COLOR_DEFAULT)))
 }
 
 // ── RichText ──────────────────────────────────────────────────────────
@@ -958,53 +679,31 @@ extern type TextSpan = "ffi.UiTextSpan"
 
 extern fn _rich_text(spans: [TextSpan], soft_wrap: Bool) Widget = "UiRichText"
 extern fn _span(
-  text: Str,
-  attrs: Int,
-  fg: Int,
-  bg: Int,
-  ul_style: Int,
-  hyperlink: Str,
-  has_on_pressed: Bool,
-  on_pressed: fn(EventContextHandle),
+  text: Str, attrs: Int, fg: Int, bg: Int, ul_style: Int,
+  hyperlink: Str, has_on_pressed: Bool, on_pressed: fn(EventContextHandle),
 ) TextSpan = "UiMakeSpan"
 
-// Build a styled run of text for use in rich_text. Everything past the
-// text itself is optional:
-//   attrs       — vaxis attribute bitmask (use bold(), italic() helpers)
-//   fg / bg     — colors; -1 means "inherit from theme"
-//   underline   — true sets single underline (most common case)
-//   hyperlink   — OSC 8 URL; turns the span into a terminal link
-//   on_pressed  — mouse/keyboard activation callback
 fn span(
-  text: Str,
-  attrs: TextAttrs?,
-  fg: Int?,
-  bg: Int?,
-  underline: Bool?,
-  hyperlink: Str?,
-  on_pressed: fn(EventContext)?,
+  text: Str, attrs: TextAttrs?, fg: vaxis::Color?, bg: vaxis::Color?,
+  underline: Bool?, hyperlink: Str?, on_pressed: fn(EventContext)?,
 ) TextSpan {
-  let has_cb = on_pressed.is_some()
   let cb = on_pressed.or(fn(_: EventContext) {})
-  let wrapped_cb = fn(c: EventContextHandle) { cb(EventContext{handle: c}) }
   mut ul_style = 0
   if underline.or(false) { ul_style = 1 }
-  _span(
-    text,
-    attrs.or(TextAttrs{}).to_int(),
-    fg.or(-1),
-    bg.or(-1),
-    ul_style,
-    hyperlink.or(""),
-    has_cb,
-    wrapped_cb,
-  )
+  _span(text, attrs.or(TextAttrs{}).to_int(),
+    vaxis::color_to_int(fg.or(vaxis::COLOR_DEFAULT)),
+    vaxis::color_to_int(bg.or(vaxis::COLOR_DEFAULT)),
+    ul_style, hyperlink.or(""),
+    on_pressed.is_some(),
+    fn(c: EventContextHandle) { cb(EventContext{handle: c}) })
 }
 
 fn rich_text(spans: [TextSpan], soft_wrap: Bool?) Widget {
   mut sw = false
   match soft_wrap {
-    v => { sw = v },
+    v => {
+      sw = v
+    },
     _ => {},
   }
   _rich_text(spans, sw)
@@ -1012,223 +711,120 @@ fn rich_text(spans: [TextSpan], soft_wrap: Bool?) Widget {
 
 // ── Basic widgets ─────────────────────────────────────────────────────
 
-extern fn _text(
-  value: Str,
-  soft_wrap: Bool,
-  align: Int,
-  overflow: Int,
-  max_lines: Int,
-) Widget = "UiText"
-extern fn _button(label: Str, on_pressed: fn(EventContextHandle)) Widget   = "UiButton"
-
+extern fn _text(value: Str, soft_wrap: Bool, align: Int, overflow: Int, max_lines: Int) Widget = "UiText"
+extern fn _button(label: Str, on_pressed: fn(EventContextHandle)) Widget = "UiButton"
 extern fn _styled_text(value: Str, fg: Int, bg: Int, ul_color: Int, ul_style: Int, attrs: Int) Widget = "UiStyledText"
 
-// Text styling and layout enums. Map at the FFI boundary; vaxis ints
-// stay an implementation detail.
-
-enum TextAlign {
-  start,
-  end,
-  left,
-  right,
-  center,
-}
+enum TextAlign { start, end, left, right, center }
 
 impl TextAlign {
   fn to_int() Int {
     match self {
-      TextAlign::start => 0,
-      TextAlign::end => 1,
-      TextAlign::left => 2,
-      TextAlign::right => 3,
-      TextAlign::center => 4,
+      TextAlign::start => 0, TextAlign::end => 1,
+      TextAlign::left => 2, TextAlign::right => 3, TextAlign::center => 4,
     }
   }
 }
 
-enum TextOverflow {
-  clip,
-  ellipsis,
-  visible,
-}
+enum TextOverflow { clip, ellipsis, visible }
 
 impl TextOverflow {
   fn to_int() Int {
     match self {
-      TextOverflow::clip => 0,
-      TextOverflow::ellipsis => 1,
-      TextOverflow::visible => 2,
+      TextOverflow::clip => 0, TextOverflow::ellipsis => 1, TextOverflow::visible => 2,
     }
   }
 }
 
-// max_lines defaults to 0 = no limit (matches vaxis Text.MaxLines zero value).
 fn text(
-  value: Str,
-  soft_wrap: Bool?,
-  align: TextAlign?,
-  overflow: TextOverflow?,
-  max_lines: Int?,
+  value: Str, soft_wrap: Bool?, align: TextAlign?, overflow: TextOverflow?, max_lines: Int?,
 ) Widget {
-  _text(
-    value,
-    soft_wrap.or(false),
-    align.or(TextAlign::start).to_int(),
-    overflow.or(TextOverflow::clip).to_int(),
-    max_lines.or(0),
-  )
+  _text(value, soft_wrap.or(false), align.or(TextAlign::start).to_int(),
+    overflow.or(TextOverflow::clip).to_int(), max_lines.or(0))
 }
 
-fn styled_text(
-  value: Str,
-  fg: Int?,
-  bg: Int?,
-  attrs: TextAttrs?,
-) Widget {
-  _styled_text(value, fg.or(-1), bg.or(-1), -1, 0, attrs.or(TextAttrs{}).to_int())
+fn styled_text(value: Str, fg: vaxis::Color?, bg: vaxis::Color?, attrs: TextAttrs?) Widget {
+  _styled_text(value,
+    vaxis::color_to_int(fg.or(vaxis::COLOR_DEFAULT)),
+    vaxis::color_to_int(bg.or(vaxis::COLOR_DEFAULT)),
+    -1, 0, attrs.or(TextAttrs{}).to_int())
 }
 
 fn button(label: Str, on_pressed: fn(EventContext)) Widget {
-  _button(
-    label,
-    fn(ctx: EventContextHandle) { on_pressed(EventContext{handle: ctx}) },
-  )
+  _button(label, fn(ctx: EventContextHandle) { on_pressed(EventContext{handle: ctx}) })
 }
 
 // ── Checkbox ──────────────────────────────────────────────────────────
 
 extern fn _checkbox(checked: Bool, disabled: Bool, label: Str, on_changed: fn(EventContextHandle, Bool)) Widget = "UiCheckbox"
 
-fn checkbox(checked: Bool, label: Str, disabled: Bool?, on_changed: fn(EventContext, Bool)) Widget {
-  mut d = false
-  match disabled {
-    v => { d = v },
-    _ => {},
-  }
-  _checkbox(
-    checked, d, label,
-    fn(ctx: EventContextHandle, next: Bool) {
-      on_changed(EventContext{handle: ctx}, next)
-    },
-  )
+fn checkbox(checked: Bool, label: Str, on_changed: fn(EventContext, Bool), disabled: Bool?) Widget {
+  _checkbox(checked, disabled.or(false), label,
+    fn(ctx: EventContextHandle, next: Bool) { on_changed(EventContext{handle: ctx}, next) })
 }
 
 // ── Radio ─────────────────────────────────────────────────────────────
 
 extern fn _radio(value: Str, group_value: Str, disabled: Bool, label: Str, on_changed: fn(EventContextHandle, Str)) Widget = "UiRadio"
 
-fn radio(
-  value: Str,
-  group_value: Str,
-  label: Str,
-  on_changed: fn(EventContext, Str),
-  disabled: Bool?,
-) Widget {
-  _radio(
-    value, group_value, disabled.or(false), label,
-    fn(ctx: EventContextHandle, next: Str) {
-      on_changed(EventContext{handle: ctx}, next)
-    },
-  )
+fn radio(value: Str, group_value: Str, label: Str, on_changed: fn(EventContext, Str), disabled: Bool?) Widget {
+  _radio(value, group_value, disabled.or(false), label,
+    fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) })
 }
 
-// ── SegmentedControl ─────────────────────────────────────────────────
+// ── SegmentedControl ──────────────────────────────────────────────────
 
 extern type SegmentedItem = "ffi.UiSegmentedItem"
 
 extern fn _segmented_control(value: Str, segments: [SegmentedItem], disabled: Bool, on_changed: fn(EventContextHandle, Str)) Widget = "UiSegmentedControl"
 extern fn _segmented_item(value: Str, label: Str, disabled: Bool) SegmentedItem = "UiMakeSegmentedItem"
 
-fn segment(value: Str, label: Str) SegmentedItem {
-  _segmented_item(value, label, false)
-}
+fn segment(value: Str, label: Str) SegmentedItem { _segmented_item(value, label, false) }
 
 fn segmented_control(value: Str, segments: [SegmentedItem], on_changed: fn(EventContext, Str)) Widget {
-  _segmented_control(
-    value, segments, false,
-    fn(ctx: EventContextHandle, next: Str) {
-      on_changed(EventContext{handle: ctx}, next)
-    },
-  )
+  _segmented_control(value, segments, false,
+    fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) })
 }
 
 // ── Divider ───────────────────────────────────────────────────────────
 
-extern fn _divider() Widget   = "UiDivider"
-
+extern fn _divider() Widget = "UiDivider"
 fn divider() Widget { _divider() }
 
-// ── Text input ───────────────────────────────────────────────────────
+// ── Text input ────────────────────────────────────────────────────────
 
 extern fn _text_field(
-  value: Str,
-  placeholder: Str,
-  min_width: Int,
-  obscure: Bool,
+  value: Str, placeholder: Str, min_width: Int, obscure: Bool,
   on_changed: fn(EventContextHandle, Str),
-  has_on_submitted: Bool,
-  on_submitted: fn(EventContextHandle, Str),
+  has_on_submitted: Bool, on_submitted: fn(EventContextHandle, Str),
 ) Widget = "UiTextField"
 
 fn text_field(
-  value: Str,
-  on_changed: fn(EventContext, Str),
-  placeholder: Str?,
-  min_width: Int?,
-  obscure: Bool?,
-  on_submitted: fn(EventContext, Str)?,
+  value: Str, on_changed: fn(EventContext, Str),
+  placeholder: Str?, min_width: Int?, obscure: Bool?, on_submitted: fn(EventContext, Str)?,
 ) Widget {
-  let has_sub = on_submitted.is_some()
-  let sub_cb = on_submitted.or(fn(_c: EventContext, _s: Str) {})
-  _text_field(
-    value,
-    placeholder.or(""),
-    min_width.or(0),
-    obscure.or(false),
+  let sub = on_submitted.or(fn(_c: EventContext, _s: Str) {})
+  _text_field(value, placeholder.or(""), min_width.or(0), obscure.or(false),
     fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) },
-    has_sub,
-    fn(ctx: EventContextHandle, submitted: Str) { sub_cb(EventContext{handle: ctx}, submitted) },
-  )
+    on_submitted.is_some(),
+    fn(ctx: EventContextHandle, s: Str) { sub(EventContext{handle: ctx}, s) })
 }
 
 // ── TextArea ──────────────────────────────────────────────────────────
 
-extern fn _text_area(
-  value: Str,
-  placeholder: Str,
-  min_width: Int,
-  min_height: Int,
-  soft_wrap: Bool,
-  on_changed: fn(EventContextHandle, Str),
-) Widget = "UiTextArea"
+extern fn _text_area(value: Str, placeholder: Str, min_width: Int, min_height: Int, soft_wrap: Bool, on_changed: fn(EventContextHandle, Str)) Widget = "UiTextArea"
 
 fn text_area(
-  value: Str,
-  on_changed: fn(EventContext, Str),
-  placeholder: Str?,
-  min_width: Int?,
-  min_height: Int?,
-  soft_wrap: Bool?,
+  value: Str, on_changed: fn(EventContext, Str),
+  placeholder: Str?, min_width: Int?, min_height: Int?, soft_wrap: Bool?,
 ) Widget {
-  _text_area(
-    value,
-    placeholder.or(""),
-    min_width.or(0),
-    min_height.or(0),
-    soft_wrap.or(false),
-    fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) },
-  )
+  _text_area(value, placeholder.or(""), min_width.or(0), min_height.or(0), soft_wrap.or(false),
+    fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) })
 }
 
-// ── Scroll ───────────────────────────────────────────────────────────
+// ── Scroll ────────────────────────────────────────────────────────────
 
-// scroll_view and scrollbar accept an optional ScrollAxis. Defaults to
-// vertical (matches vaxis ScrollVertical zero value).
-
-enum ScrollAxis {
-  vertical,
-  horizontal,
-}
+enum ScrollAxis { vertical, horizontal }
 
 impl ScrollAxis {
   fn to_int() Int {
@@ -1258,17 +854,12 @@ fn scrollbar(child: Widget, axis: ScrollAxis?) Widget {
 }
 
 fn scroll_pane_controller() ScrollPaneController { _scroll_pane_controller() }
-
-// Pass `controller` only if you need to drive the pane programmatically.
-// Otherwise omit it; a fresh internal controller is created and discarded.
 fn scroll_pane(child: Widget, controller: ScrollPaneController?) Widget {
   _scroll_pane(controller.or(_scroll_pane_controller()), child)
 }
-
 fn scroll_pane_scroll_by(controller: ScrollPaneController, cols: Int, rows: Int) Bool {
   _scroll_pane_scroll_by(controller, cols, rows)
 }
-
 fn scroll_pane_scroll_to(controller: ScrollPaneController, col: Int, row: Int) Bool {
   _scroll_pane_scroll_to(controller, col, row)
 }
@@ -1278,25 +869,18 @@ fn scroll_pane_scroll_to(controller: ScrollPaneController, col: Int, row: Int) B
 extern type ScrollController = "*ui.ScrollController"
 
 extern fn _scroll_controller() ScrollController = "UiScrollController"
-extern fn _scroll_controller_scroll_by_lines(controller: ScrollController, lines: Int) Bool = "UiScrollControllerScrollByLines"
-extern fn _scroll_controller_scroll_to_offset(controller: ScrollController, row: Int) Bool = "UiScrollControllerScrollToOffset"
-extern fn _scroll_controller_scroll_to_start(controller: ScrollController) Bool = "UiScrollControllerScrollToStart"
-extern fn _scroll_controller_scroll_to_end(controller: ScrollController) Bool = "UiScrollControllerScrollToEnd"
+extern fn _scroll_controller_scroll_by_lines(c: ScrollController, lines: Int) Bool = "UiScrollControllerScrollByLines"
+extern fn _scroll_controller_scroll_to_offset(c: ScrollController, row: Int) Bool = "UiScrollControllerScrollToOffset"
+extern fn _scroll_controller_scroll_to_start(c: ScrollController) Bool = "UiScrollControllerScrollToStart"
+extern fn _scroll_controller_scroll_to_end(c: ScrollController) Bool = "UiScrollControllerScrollToEnd"
 
-extern fn _custom_scroll_view(
-  controller: ScrollController,
-  slivers: [Widget],
-  follow_output: Bool,
-) Widget = "UiCustomScrollView"
+extern fn _custom_scroll_view(controller: ScrollController, slivers: [Widget], follow_output: Bool) Widget = "UiCustomScrollView"
 extern fn _sliver_to_box(child: Widget) Widget = "UiSliverToBox"
 extern fn _sliver_pinned_header(child: Widget) Widget = "UiSliverPinnedHeader"
 extern fn _sliver_fill_remaining(child: Widget) Widget = "UiSliverFillRemaining"
 extern fn _sliver_list(children: [Widget]) Widget = "UiSliverList"
 extern fn _sliver_list_builder(
-  count: Int,
-  item_extent: Int,
-  estimated_item_extent: Int,
-  overscan: Int,
+  count: Int, item_extent: Int, estimated_item_extent: Int, overscan: Int,
   builder: fn(BuildContextHandle, Int) Widget,
 ) Widget = "UiSliverListBuilder"
 
@@ -1306,11 +890,7 @@ fn scroll_controller_scroll_to_offset(c: ScrollController, row: Int) Bool { _scr
 fn scroll_controller_scroll_to_start(c: ScrollController) Bool { _scroll_controller_scroll_to_start(c) }
 fn scroll_controller_scroll_to_end(c: ScrollController) Bool { _scroll_controller_scroll_to_end(c) }
 
-fn custom_scroll_view(
-  controller: ScrollController,
-  slivers: [Widget],
-  follow_output: Bool?,
-) Widget {
+fn custom_scroll_view(controller: ScrollController, slivers: [Widget], follow_output: Bool?) Widget {
   _custom_scroll_view(controller, slivers, follow_output.or(false))
 }
 
@@ -1319,98 +899,59 @@ fn sliver_pinned_header(child: Widget) Widget { _sliver_pinned_header(child) }
 fn sliver_fill_remaining(child: Widget) Widget { _sliver_fill_remaining(child) }
 fn sliver_list(children: [Widget]) Widget { _sliver_list(children) }
 
-// Lazy/index-based sliver. Set item_extent for fixed-height rows or
-// estimated_item_extent for variable-height; leave both zero for the
-// vaxis default. `builder(ctx, i)` is invoked per visible row.
 fn sliver_list_builder(
-  count: Int,
-  builder: fn(BuildContext, Int) Widget,
-  item_extent: Int?,
-  estimated_item_extent: Int?,
-  overscan: Int?,
+  count: Int, builder: fn(BuildContext, Int) Widget,
+  item_extent: Int?, estimated_item_extent: Int?, overscan: Int?,
 ) Widget {
-  _sliver_list_builder(
-    count,
-    item_extent.or(0),
-    estimated_item_extent.or(0),
-    overscan.or(0),
-    fn(ctx: BuildContextHandle, i: Int) Widget {
-      builder(BuildContext{handle: ctx}, i)
-    },
-  )
+  _sliver_list_builder(count, item_extent.or(0), estimated_item_extent.or(0), overscan.or(0),
+    fn(ctx: BuildContextHandle, i: Int) Widget { builder(BuildContext{handle: ctx}, i) })
 }
 
 // ── Actions ───────────────────────────────────────────────────────────
 
-extern fn _actions(child: Widget, bindings: [ActionBinding]) Widget   = "UiActions"
-extern fn _shortcuts(child: Widget, bindings: [Str:Str]) Widget   = "UiShortcuts"
+extern fn _actions(child: Widget, bindings: [ActionBinding]) Widget = "UiActions"
+extern fn _shortcuts(child: Widget, bindings: [Str:Str]) Widget = "UiShortcuts"
 
 fn action(name: Str, handler: fn(EventContext, Str) EventResult) ActionBinding {
-  _action_binding(
-    name,
+  _action_binding(name,
     fn(ctx: EventContextHandle, intent: Str) Int {
       match handler(EventContext{handle: ctx}, intent) {
         EventResult::handled => 1,
         EventResult::ignored => 0,
       }
-    },
-  )
+    })
 }
 
-fn actions(child: Widget, bindings: [ActionBinding]) Widget {
-  _actions(child, bindings)
-}
-
-fn shortcuts(child: Widget, bindings: [Str:Str]) Widget {
-  _shortcuts(child, bindings)
-}
+fn actions(child: Widget, bindings: [ActionBinding]) Widget { _actions(child, bindings) }
+fn shortcuts(child: Widget, bindings: [Str:Str]) Widget { _shortcuts(child, bindings) }
 
 // ── Focus ─────────────────────────────────────────────────────────────
 
-extern fn _focus(child: Widget) Widget   = "UiFocus"
-extern fn _focus_scope(child: Widget, trap: Bool, auto_focus: Bool) Widget   = "UiFocusScope"
+extern fn _focus(child: Widget) Widget = "UiFocus"
+extern fn _focus_scope(child: Widget, trap: Bool, auto_focus: Bool) Widget = "UiFocusScope"
 
 fn focus(child: Widget) Widget { _focus(child) }
-
-fn focus_scope(child: Widget, trap: Bool, auto_focus: Bool) Widget {
-  _focus_scope(child, trap, auto_focus)
-}
+fn focus_scope(child: Widget, trap: Bool, auto_focus: Bool) Widget { _focus_scope(child, trap, auto_focus) }
 
 // ── Stateful widget ───────────────────────────────────────────────────
 
 extern fn _stateful<$T>(
-  key: Str,
-  init: fn(BuildContextHandle, StateHandle) $T,
-  build: fn(BuildContextHandle, StateHandle) Widget,
-) Widget   = "UiStateful"
+  key: Str, init: fn(BuildContextHandle, StateHandle) $T, build: fn(BuildContextHandle, StateHandle) Widget,
+) Widget = "UiStateful"
 
-extern fn _state_value<$T>(ctx: StateHandle) $T   = "UiStateValue"
-extern fn _state_set_value<$T>(ctx: StateHandle, value: $T) Void   = "UiStateSetValue"
+extern fn _state_value<$T>(ctx: StateHandle) $T = "UiStateValue"
+extern fn _state_set_value<$T>(ctx: StateHandle, value: $T) Void = "UiStateSetValue"
 
-// Runtime is vaxis/ui's UI-thread dispatcher. We type it by `$T` so
-// dispatched callbacks get `State<$T>` directly.
 extern type RuntimeHandle = "ui.Runtime"
 extern fn _build_context_runtime(ctx: BuildContextHandle) RuntimeHandle = "UiBuildContextRuntime"
-extern fn _runtime_dispatch(
-  runtime: RuntimeHandle,
-  state: StateHandle,
-  callback: fn(StateHandle),
-) Void = "UiRuntimeDispatch"
+extern fn _runtime_dispatch(runtime: RuntimeHandle, state: StateHandle, callback: fn(StateHandle)) Void = "UiRuntimeDispatch"
 
-struct BuildContext {
-  handle: BuildContextHandle,
-  state: StateHandle?,
-}
+struct BuildContext { handle: BuildContextHandle, state: StateHandle? }
 
-struct State<$T> {
-  handle: StateHandle,
-}
+struct State<$T> { handle: StateHandle }
 
 impl State {
-  fn value() $T {
-    _state_value<$T>(self.handle)
-  }
-
+  fn value() $T { _state_value<$T>(self.handle) }
   fn set(mutate: fn(mut $T)) {
     mut next = self.value()
     mutate(next)
@@ -1418,26 +959,13 @@ impl State {
   }
 }
 
-// Runtime<$T> is a typed re-entry point for background work to update state.
-// Get one via `ctx.runtime<$T>()` from inside `stateful`'s `init` or `build`.
-struct Runtime<$T> {
-  handle: RuntimeHandle,
-  state: StateHandle?,
-}
+struct Runtime<$T> { handle: RuntimeHandle, state: StateHandle? }
 
 impl Runtime {
-  // Schedule `callback` on the UI thread. The callback receives the
-  // typed `State<$T>` so it can call `.set(...)` directly. If the
-  // owning stateful widget has unmounted, the dispatch is a no-op.
   fn dispatch(callback: fn(State<$T>)) {
     match self.state {
-      h => _runtime_dispatch(
-        self.handle,
-        h,
-        fn(state_handle: StateHandle) {
-          callback(State{handle: state_handle})
-        },
-      ),
+      h => _runtime_dispatch(self.handle, h,
+        fn(state_handle: StateHandle) { callback(State{handle: state_handle}) }),
       _ => {},
     }
   }
@@ -1450,20 +978,13 @@ impl BuildContext {
 }
 
 fn stateful<$T>(
-  key: Str,
-  init: fn(BuildContext) $T,
-  build: fn(BuildContext, State<$T>) Widget,
+  key: Str, init: fn(BuildContext) $T, build: fn(BuildContext, State<$T>) Widget,
 ) Widget {
-  _stateful(
-    key: key,
+  _stateful(key: key,
     init: fn(build_ctx: BuildContextHandle, state_handle: StateHandle) $T {
       init(BuildContext{handle: build_ctx, state: state_handle})
     },
     build: fn(build_ctx: BuildContextHandle, state_handle: StateHandle) Widget {
-      build(
-        BuildContext{handle: build_ctx, state: state_handle},
-        State{handle: state_handle},
-      )
-    },
-  )
+      build(BuildContext{handle: build_ctx, state: state_handle}, State{handle: state_handle})
+    })
 }

@@ -480,6 +480,21 @@ fn color_to_int(color: Color) Int {
   }
 }
 
+fn int_to_color(value: Int) Color {
+  mut result: Color = DefaultColor{}
+  if value < 0 {
+    result = DefaultColor{}
+  } else if value <= 255 {
+    result = IndexedColor{ value: value }
+  } else {
+    let r = value / 65536
+    let g = (value / 256) % 256
+    let b = value % 256
+    result = RGBColor{ r: r, g: g, b: b }
+  }
+  result
+}
+
 fn style_attrs(s: Style) Int {
   mut attrs = 0
   if s.bold { attrs = attrs + 1 }
