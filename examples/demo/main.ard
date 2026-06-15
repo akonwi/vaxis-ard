@@ -249,16 +249,20 @@ fn page_label(index: Int, page: Int) Str {
   if index == page { "[" + page_name(index) + "]" } else { " " + page_name(index) + " " }
 }
 
-fn build_header(page: Int, state: ui::State<DemoState>) ui::Widget {
+fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
   mut tabs: [ui::Widget] = []
   mut i = 0
   while i < 6 {
     if i > 0 {
       tabs.push(ui::sized_box(1, 1, ui::text("")))
     }
-    tabs.push(ui::button(page_label(i, page), fn(ctx: ui::EventContext) {
+    mut tab_theme = theme
+    if i == page {
+      tab_theme = ui::theme_with_surface_hovered(ui::theme_with_surface(theme, ui::theme_primary(theme)), ui::theme_primary_hovered(theme))
+    }
+    tabs.push(ui::provider_theme(tab_theme, ui::button(page_label(i, page), fn(ctx: ui::EventContext) {
       state.set(fn(mut s: DemoState) { s.page = i })
-    }))
+    })))
     i = i + 1
   }
   ui::column([
@@ -300,8 +304,9 @@ fn root_widget() ui::Widget {
     init: fn(ctx: ui::BuildContext) DemoState { initial_state() },
     build: fn(ctx: ui::BuildContext, state: ui::State<DemoState>) ui::Widget {
       let model = state.value()
+      let theme = ui::must_depend_theme(ctx)
       let content = ui::column([
-        build_header(model.page, state),
+        build_header(model.page, state, theme),
         ui::sized_box(80, 1, ui::text("")),
         build_page(model, state),
         ui::sized_box(80, 1, ui::text("")),

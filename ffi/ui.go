@@ -513,6 +513,131 @@ func UiRuntimeDispatch(rt ui.Runtime, fn func()) {
 	rt.Dispatch(fn)
 }
 
+// ─── Theme system ────────────────────────────────────────────────────
+
+type UiTheme struct {
+	Theme ui.Theme
+}
+
+func UiThemeDefault() UiTheme {
+	return UiTheme{Theme: ui.DefaultTheme()}
+}
+
+func UiMustDependTheme(ctx ui.BuildContext) UiTheme {
+	return UiTheme{Theme: ui.MustDepend[ui.Theme](ctx)}
+}
+
+func UiProviderTheme(t UiTheme, child ui.Widget) ui.Widget {
+	return ui.Provider[ui.Theme]{Value: t.Theme, Child: child}
+}
+
+func UiRunWithTheme(root ui.Widget, theme UiTheme) error {
+	return ui.Run(root, ui.WithTheme(theme.Theme))
+}
+
+// ─── Theme field setters ─────────────────────────────────────────────
+
+func UiThemeWithBackground(t UiTheme, color int) UiTheme {
+	t.Theme.Background = vaxis.Color(color)
+	return t
+}
+func UiThemeWithForeground(t UiTheme, color int) UiTheme {
+	t.Theme.Foreground = vaxis.Color(color)
+	return t
+}
+func UiThemeWithSurface(t UiTheme, color int) UiTheme {
+	t.Theme.Surface = vaxis.Color(color)
+	return t
+}
+func UiThemeWithSurfaceRaised(t UiTheme, color int) UiTheme {
+	t.Theme.SurfaceRaised = vaxis.Color(color)
+	return t
+}
+func UiThemeWithSurfaceHovered(t UiTheme, color int) UiTheme {
+	t.Theme.SurfaceHovered = vaxis.Color(color)
+	return t
+}
+func UiThemeWithSurfacePressed(t UiTheme, color int) UiTheme {
+	t.Theme.SurfacePressed = vaxis.Color(color)
+	return t
+}
+func UiThemeWithPrimary(t UiTheme, color int) UiTheme {
+	t.Theme.Primary = vaxis.Color(color)
+	return t
+}
+func UiThemeWithPrimaryText(t UiTheme, color int) UiTheme {
+	t.Theme.PrimaryText = vaxis.Color(color)
+	return t
+}
+func UiThemeWithPrimaryHovered(t UiTheme, color int) UiTheme {
+	t.Theme.PrimaryHovered = vaxis.Color(color)
+	return t
+}
+func UiThemeWithPrimaryPressed(t UiTheme, color int) UiTheme {
+	t.Theme.PrimaryPressed = vaxis.Color(color)
+	return t
+}
+func UiThemeWithAccent(t UiTheme, color int) UiTheme {
+	t.Theme.Accent = vaxis.Color(color)
+	return t
+}
+func UiThemeWithAccentText(t UiTheme, color int) UiTheme {
+	t.Theme.AccentText = vaxis.Color(color)
+	return t
+}
+func UiThemeWithSuccess(t UiTheme, color int) UiTheme {
+	t.Theme.Success = vaxis.Color(color)
+	return t
+}
+func UiThemeWithSuccessText(t UiTheme, color int) UiTheme {
+	t.Theme.SuccessText = vaxis.Color(color)
+	return t
+}
+func UiThemeWithWarning(t UiTheme, color int) UiTheme {
+	t.Theme.Warning = vaxis.Color(color)
+	return t
+}
+func UiThemeWithWarningText(t UiTheme, color int) UiTheme {
+	t.Theme.WarningText = vaxis.Color(color)
+	return t
+}
+func UiThemeWithDanger(t UiTheme, color int) UiTheme {
+	t.Theme.Danger = vaxis.Color(color)
+	return t
+}
+func UiThemeWithDangerText(t UiTheme, color int) UiTheme {
+	t.Theme.DangerText = vaxis.Color(color)
+	return t
+}
+func UiThemeWithMutedForeground(t UiTheme, color int) UiTheme {
+	t.Theme.MutedForeground = vaxis.Color(color)
+	return t
+}
+func UiThemeWithDisabledForeground(t UiTheme, color int) UiTheme {
+	t.Theme.DisabledForeground = vaxis.Color(color)
+	return t
+}
+func UiThemeWithSelection(t UiTheme, color int) UiTheme {
+	t.Theme.Selection = vaxis.Color(color)
+	return t
+}
+func UiThemeWithBorder(t UiTheme, color int) UiTheme {
+	t.Theme.Border = vaxis.Color(color)
+	return t
+}
+func UiThemeWithMode(t UiTheme, mode int) UiTheme {
+	t.Theme.Mode = ui.ThemeMode(mode)
+	return t
+}
+
+// Theme field getters
+func UiThemePrimary(t UiTheme) int        { return int(t.Theme.Primary) }
+func UiThemePrimaryHovered(t UiTheme) int { return int(t.Theme.PrimaryHovered) }
+func UiThemeBackground(t UiTheme) int     { return int(t.Theme.Background) }
+func UiThemeForeground(t UiTheme) int     { return int(t.Theme.Foreground) }
+func UiThemeSurface(t UiTheme) int        { return int(t.Theme.Surface) }
+func UiThemeBorder(t UiTheme) int         { return int(t.Theme.Border) }
+
 // ─── Animation helpers ───────────────────────────────────────────────
 
 func decodeUiStyle(fg, bg, ulColor, ulStyle, attrs int) vaxis.Style {
