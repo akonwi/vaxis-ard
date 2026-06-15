@@ -466,23 +466,47 @@ struct TextAttrs {
   strikethrough: Bool?,
 }
 
-// Map TextAttrs? to the vaxis attribute bitmask. Flags are
-// non-overlapping powers of two, so `+` is a correct OR (AGENTS.md).
-fn _attr_bits(attrs: TextAttrs?) Int {
-  mut bits = 0
-  match attrs {
-    a => {
-      if a.bold.or(false) { bits = bits + 1 }
-      if a.dim.or(false) { bits = bits + 2 }
-      if a.italic.or(false) { bits = bits + 4 }
-      if a.blink.or(false) { bits = bits + 8 }
-      if a.reverse.or(false) { bits = bits + 16 }
-      if a.invisible.or(false) { bits = bits + 32 }
-      if a.strikethrough.or(false) { bits = bits + 64 }
-    },
-    _ => {},
+// TextAttrFlag mirrors the individual bits of vaxis.AttributeMask.
+// The bit values live only inside `::to_int()` — the public API uses
+// the typed enum, never a raw Int.
+enum TextAttrFlag {
+  bold,
+  dim,
+  italic,
+  blink,
+  reverse,
+  invisible,
+  strikethrough,
+}
+
+impl TextAttrFlag {
+  fn to_int() Int {
+    match self {
+      TextAttrFlag::bold          => 1,
+      TextAttrFlag::dim           => 2,
+      TextAttrFlag::italic        => 4,
+      TextAttrFlag::blink         => 8,
+      TextAttrFlag::reverse       => 16,
+      TextAttrFlag::invisible     => 32,
+      TextAttrFlag::strikethrough => 64,
+    }
   }
-  bits
+}
+
+impl TextAttrs {
+  // OR the set flags into a vaxis attribute bitmask. Flag bits are
+  // non-overlapping powers of two, so `+` is a correct OR (AGENTS.md).
+  fn to_int() Int {
+    mut bits = 0
+    if self.bold.or(false)          { bits = bits + TextAttrFlag::bold.to_int() }
+    if self.dim.or(false)           { bits = bits + TextAttrFlag::dim.to_int() }
+    if self.italic.or(false)        { bits = bits + TextAttrFlag::italic.to_int() }
+    if self.blink.or(false)         { bits = bits + TextAttrFlag::blink.to_int() }
+    if self.reverse.or(false)       { bits = bits + TextAttrFlag::reverse.to_int() }
+    if self.invisible.or(false)     { bits = bits + TextAttrFlag::invisible.to_int() }
+    if self.strikethrough.or(false) { bits = bits + TextAttrFlag::strikethrough.to_int() }
+    bits
+  }
 }
 
 fn decorated_box(
@@ -491,7 +515,7 @@ fn decorated_box(
   bg: Int?,
   attrs: TextAttrs?,
 ) Widget {
-  _decorated_box(fg.or(-1), bg.or(-1), -1, 0, _attr_bits(attrs), false, false, false, false, child)
+  _decorated_box(fg.or(-1), bg.or(-1), -1, 0, attrs.or(TextAttrs{}).to_int(), false, false, false, false, child)
 }
 
 fn bordered_box(
@@ -500,7 +524,7 @@ fn bordered_box(
   bg: Int?,
   attrs: TextAttrs?,
 ) Widget {
-  _decorated_box(fg.or(-1), bg.or(-1), -1, 0, _attr_bits(attrs), true, true, true, true, child)
+  _decorated_box(fg.or(-1), bg.or(-1), -1, 0, attrs.or(TextAttrs{}).to_int(), true, true, true, true, child)
 }
 
 // ── Align ─────────────────────────────────────────────────────────────
@@ -831,7 +855,7 @@ fn span(
   if underline.or(false) { ul_style = 1 }
   _span(
     text,
-    _attr_bits(attrs),
+    attrs.or(TextAttrs{}).to_int(),
     fg.or(-1),
     bg.or(-1),
     ul_style,
@@ -925,7 +949,7 @@ fn styled_text(
   bg: Int?,
   attrs: TextAttrs?,
 ) Widget {
-  _styled_text(value, fg.or(-1), bg.or(-1), -1, 0, _attr_bits(attrs))
+  _styled_text(value, fg.or(-1), bg.or(-1), -1, 0, attrs.or(TextAttrs{}).to_int())
 }
 
 fn button(label: Str, on_pressed: fn(EventContext)) Widget {
