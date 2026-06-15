@@ -68,8 +68,14 @@ func UiSizedBox(width, height int, child ui.Widget) ui.Widget {
 
 // ─── Basic widgets ────────────────────────────────────────────────────
 
-func UiText(value string, softWrap bool) ui.Widget {
-	return ui.Text{Value: value, SoftWrap: softWrap}
+func UiText(value string, softWrap bool, align, overflow, maxLines int) ui.Widget {
+	return ui.Text{
+		Value:    value,
+		SoftWrap: softWrap,
+		Align:    ui.TextAlign(align),
+		Overflow: ui.TextOverflow(overflow),
+		MaxLines: maxLines,
+	}
 }
 
 func UiStyledText(value string, fg, bg, ulColor, ulStyle, attrs int) ui.Widget {
