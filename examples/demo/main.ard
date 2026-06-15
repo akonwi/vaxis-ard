@@ -826,14 +826,27 @@ fn build_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
 
 // ─── Root widget ──────────────────────────────────────────────────────
 
-fn keyboard_shortcuts() [Str:Str] {
-  [
-    "q": demo_quit(),
-    "n": demo_next(),
-    "p": demo_prev(),
-    "d": demo_dialog(),
-    "Alt+k": demo_palette(),
-  ]
+// Page-navigation shortcuts (q / n / p / d) only bind while the
+// command palette is closed — otherwise they'd swallow text typed into
+// the palette's search field. Alt+K (open palette) and Alt+P (toggle
+// profile overlay) bind unconditionally so they always work, even when
+// a modal is up. Matches upstream's conditional shortcuts() table.
+fn keyboard_shortcuts(palette_open: Bool) [Str:Str] {
+  if palette_open {
+    [
+      "Alt+k": demo_palette(),
+      "Alt+p": ui::toggle_profile_overlay_intent(),
+    ]
+  } else {
+    [
+      "q": demo_quit(),
+      "n": demo_next(),
+      "p": demo_prev(),
+      "d": demo_dialog(),
+      "Alt+k": demo_palette(),
+      "Alt+p": ui::toggle_profile_overlay_intent(),
+    ]
+  }
 }
 
 // Build the full set of command palette entries: one per page +
@@ -957,8 +970,12 @@ fn root_widget() ui::Widget {
             state.set(fn(mut s: DemoState) { s.palette_open = true })
             ui::EventResult::handled
           }),
+          ui::action(ui::toggle_profile_overlay_intent(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+            ui::toggle_profile_overlay(ctx)
+            ui::EventResult::handled
+          }),
         ]),
-        keyboard_shortcuts(),
+        keyboard_shortcuts(model.palette_open),
       )
 
       // Stack overlays in the same order upstream does: palette first,

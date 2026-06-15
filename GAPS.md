@@ -43,6 +43,44 @@ and on deciding whether to write a pure‑Ard ANSI parser or bind the Go one.
 
 ---
 
+## Deferred — heavy effort
+
+### `widgets/term.Terminal` — embedded terminal emulator widget
+
+Upstream's demo has a Terminal page that spawns `$SHELL -i` inside a
+PTY and renders an interactive terminal inside a 72×8 cell area of the
+vaxis UI. Useful capability but a non-trivial bind:
+
+- New extern type for `*exec.Cmd` (or a wrapper) plus a constructor
+  `terminal_command(name: Str, args: [Str]) TerminalCommand`. `$SHELL`
+  lookup is available via stdlib `ard/env` so the demo wiring stays
+  small.
+- `[]term.Option` functional-options pattern needs typing. In practice
+  only `term.WithKittyKeyboard` is used; a single `enable_kitty: Bool?`
+  flag on the `terminal(...)` wrapper would cover the demo cleanly.
+- `OnEvent` callback receives `ui.Event` which gets type-asserted to
+  `term.EventTitle`, `term.EventNotify`, `term.EventClosed`,
+  `term.EventMouseShape`, `term.EventWorkingDirectory`. Either bind
+  these as a new Ard type union
+  `TerminalEvent = TerminalEventTitle | TerminalEventNotify | …` with
+  payload accessors per variant, or expose a flatter
+  `(kind: TerminalEventKind, payload: Str)` style dispatch (lossy but
+  small surface).
+- `widgets/term` is a separate Go sub-package that pulls in its own
+  ANSI parser and PTY plumbing (`creack/pty` on Linux/macOS; no
+  Windows support). Adds dependency surface and binary size.
+- Demo-specific wiring: 8th page slot, hidden from the tab bar but
+  reachable via the command palette, plus conditional shortcuts so
+  `q` / `n` / `p` don't get swallowed by the shell.
+
+No new layout / styling primitives needed; the only new vaxis APIs
+exposed are the terminal widget itself and the per-page-suppression of
+shortcuts. Rated **high effort, low API gain** — the rest of the demo
+covers the binding surface that exists. Add when there's a concrete
+use case beyond demo parity.
+
+---
+
 ## Deferred — low demand
 
 ### `PollEvent`

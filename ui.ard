@@ -47,6 +47,7 @@ extern fn _quit(ctx: EventContextHandle) Void   = "UiQuit"
 extern fn _notify(ctx: EventContextHandle, title: Str, body: Str) Void   = "UiNotify"
 extern fn _set_title(ctx: EventContextHandle, title: Str) Void   = "UiSetTitle"
 extern fn _copy(ctx: EventContextHandle, text: Str) Void   = "UiCopy"
+extern fn _toggle_profile_overlay(ctx: EventContextHandle) Void = "UiToggleProfileOverlay"
 
 struct EventContext {
   handle: EventContextHandle,
@@ -56,6 +57,14 @@ fn quit(ctx: EventContext) { _quit(ctx.handle) }
 fn notify(ctx: EventContext, title: Str, body: Str) { _notify(ctx.handle, title, body) }
 fn set_title(ctx: EventContext, title: Str) { _set_title(ctx.handle, title) }
 fn copy(ctx: EventContext, text: Str) { _copy(ctx.handle, text) }
+// Toggles vaxis's built-in profiling overlay (frame timings + churn).
+// Intent name `vaxis.toggle-profile-overlay` is also registered by the
+// runtime, so callers can bind a key to that intent instead.
+fn toggle_profile_overlay(ctx: EventContext) { _toggle_profile_overlay(ctx.handle) }
+
+// vaxis-registered intent constant. Bind a shortcut to this string in
+// shortcuts(); the runtime will invoke the matching ctx method.
+fn toggle_profile_overlay_intent() Str { "vaxis.toggle-profile-overlay" }
 
 // ── Theme system ──────────────────────────────────────────────────────
 

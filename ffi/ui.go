@@ -665,6 +665,11 @@ func UiRunWithBaseColors(root ui.Widget, black, red, green, yellow, blue, magent
 func UiQuit(ctx ui.EventContext) { ctx.Quit() }
 func UiNotify(ctx ui.EventContext, title, body string) { ctx.Notify(title, body) }
 func UiSetTitle(ctx ui.EventContext, title string) { ctx.SetTitle(title) }
+
+// UiToggleProfileOverlay flips the built-in vaxis profiling overlay
+// (shows frame timings + state churn over the app). Bound to Alt+P in
+// the upstream demo.
+func UiToggleProfileOverlay(ctx ui.EventContext) { ctx.ToggleProfileOverlay() }
 func UiCopy(ctx ui.EventContext, text string) { ctx.Copy(text) }
 
 // ─── Runtime dispatch ────────────────────────────────────────────────
