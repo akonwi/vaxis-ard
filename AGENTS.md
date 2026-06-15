@@ -288,6 +288,8 @@ spec. Anything subtle should be confirmed with `ard-expert`.
 - **`list.push()` requires local target**: cannot call `.push()` on a list captured from an enclosing scope (e.g. inside closures). Extract list mutations into free functions that return a new list.
 - **`if/else` as value only works as the last expression in a function**: cannot use `let x = if ... { ... } else { ... }`. Use `mut` with separate `if` assignments instead.
 - **`Void!Str` returns need `Result::ok(())`**: fallible functions must explicitly wrap success
+- **Nullable callback gotcha — `fn(X) Void?` is NOT a nullable function**: the `?` binds to the return type, yielding `fn(X) Maybe[Void]` (a non-null function returning nullable Void). For a *nullable* callback, **omit the return type entirely**: write `on_pressed: fn(EventContext)?`. The parser only treats `?` as nullable on the function type when there's no return type to attach to (`fn(...)?` works; `(fn(...) T)?` grouping is not supported).
+- **Cross-file references within a package require a stem import**: a nested module (e.g. `ui.ard` inside the `vaxis` package) cannot `use vaxis` (resolver rejects same-package import via the package name alone) and cannot reference siblings without `use`. To pull a type from `vaxis.ard` into `ui.ard`, write `use vaxis/vaxis` (the file stem) and reference it as `vaxis::Type::variant`. Cleaner long-term: move shared types into a third file (e.g. `style.ard`) that both root and nested modules import.
 
 ## Dependencies
 
