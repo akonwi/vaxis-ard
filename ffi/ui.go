@@ -480,12 +480,18 @@ func UiSliverList(children []ui.Widget) ui.Widget {
 
 // ─── App runner ───────────────────────────────────────────────────────
 
-func UiRun(root ui.Widget) error {
-	return ui.Run(root)
+// All Ui*Run* functions return nothing. ui.Run only errors on backend
+// setup failure (bad terminal, etc.) which is fatal at app start, so
+// we panic to surface it rather than funnel it through Ard's Result.
+
+func UiRun(root ui.Widget) {
+	if err := ui.Run(root); err != nil {
+		panic(err)
+	}
 }
 
-func UiRunWithBaseColors(root ui.Widget, black, red, green, yellow, blue, magenta, cyan, white int) error {
-	return ui.Run(root, ui.WithBaseColors(ui.BaseColors{
+func UiRunWithBaseColors(root ui.Widget, black, red, green, yellow, blue, magenta, cyan, white int) {
+	err := ui.Run(root, ui.WithBaseColors(ui.BaseColors{
 		Black:   colorFromInt(black),
 		Red:     colorFromInt(red),
 		Green:   colorFromInt(green),
@@ -495,6 +501,9 @@ func UiRunWithBaseColors(root ui.Widget, black, red, green, yellow, blue, magent
 		Cyan:    colorFromInt(cyan),
 		White:   colorFromInt(white),
 	}))
+	if err != nil {
+		panic(err)
+	}
 }
 
 // ─── Event helpers ────────────────────────────────────────────────────
@@ -550,8 +559,10 @@ func UiProviderTheme(t UiTheme, child ui.Widget) ui.Widget {
 	return ui.Provider[ui.Theme]{Value: t.Theme, Child: child}
 }
 
-func UiRunWithTheme(root ui.Widget, theme UiTheme) error {
-	return ui.Run(root, ui.WithTheme(theme.Theme))
+func UiRunWithTheme(root ui.Widget, theme UiTheme) {
+	if err := ui.Run(root, ui.WithTheme(theme.Theme)); err != nil {
+		panic(err)
+	}
 }
 
 // ─── Theme field setters ─────────────────────────────────────────────
@@ -680,6 +691,23 @@ func UiThemeLight() UiTheme {
 }
 func UiThemeDark() UiTheme {
 	return UiTheme{Theme: ui.DefaultThemeSet().Dark}
+}
+
+// UiThemeSet wraps a vaxis/ui ThemeSet (a light + dark Theme pair).
+type UiThemeSet struct {
+	Set ui.ThemeSet
+}
+
+func UiThemeSetDefault() UiThemeSet {
+	return UiThemeSet{Set: ui.DefaultThemeSet()}
+}
+
+// UiRunWithThemeSet runs the app with both light + dark themes registered.
+// vaxis swaps between them in response to terminal ColorThemeUpdate events.
+func UiRunWithThemeSet(root ui.Widget, ts UiThemeSet) {
+	if err := ui.Run(root, ui.WithThemeSet(ts.Set)); err != nil {
+		panic(err)
+	}
 }
 
 // ─── Animation helpers ───────────────────────────────────────────────

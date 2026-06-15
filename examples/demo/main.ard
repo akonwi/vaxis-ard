@@ -412,5 +412,5 @@ fn root_widget() ui::Widget {
 // ─── Entrypoint ───────────────────────────────────────────────────────
 
 fn main() Void {
-  ui::run_with_theme(root_widget(), ui::theme_light()).expect("run demo")
+  ui::run_with_theme_set(root_widget(), ui::default_theme_set())
 }

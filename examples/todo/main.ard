@@ -292,5 +292,5 @@ fn root_widget() ui::Widget {
 }
 
 fn main() Void {
-  ui::run(root_widget()).expect("run todo")
+  ui::run(root_widget())
 }

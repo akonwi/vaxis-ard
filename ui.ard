@@ -27,14 +27,17 @@ extern fn _action_binding(name: Str, handler: fn(EventContextHandle, Str) Int) A
 
 // ── Lifecycle ─────────────────────────────────────────────────────────
 
-extern fn _run(root: Widget) Void!Str   = "UiRun"
-extern fn _run_themed(root: Widget, black: Int, red: Int, green: Int, yellow: Int, blue: Int, magenta: Int, cyan: Int, white: Int) Void!Str   = "UiRunWithBaseColors"
+// Top-level entry points. All `run*` wrappers return Void. If vaxis fails
+// to initialise the backend (rare; bad terminal), the Go side panics so the
+// error is loud rather than silently funnelled through a Result.
+extern fn _run(root: Widget) Void   = "UiRun"
+extern fn _run_themed(root: Widget, black: Int, red: Int, green: Int, yellow: Int, blue: Int, magenta: Int, cyan: Int, white: Int) Void   = "UiRunWithBaseColors"
 
-fn run(root: Widget) Void!Str {
+fn run(root: Widget) Void {
   _run(root)
 }
 
-fn run_themed(root: Widget, black: Int, red: Int, green: Int, yellow: Int, blue: Int, magenta: Int, cyan: Int, white: Int) Void!Str {
+fn run_themed(root: Widget, black: Int, red: Int, green: Int, yellow: Int, blue: Int, magenta: Int, cyan: Int, white: Int) Void {
   _run_themed(root, black, red, green, yellow, blue, magenta, cyan, white)
 }
 
@@ -140,6 +143,13 @@ extern fn _must_have_theme(ctx: BuildContextHandle) ThemeHandle = "UiMustHaveThe
 extern fn _provider_theme(theme: ThemeHandle, child: Widget) Widget = "UiProviderTheme"
 extern fn _run_with_theme(root: Widget, theme: ThemeHandle) Void = "UiRunWithTheme"
 
+// A ThemeSet bundles both light and dark Theme variants. When passed to
+// run_with_theme_set, vaxis swaps between them in response to terminal
+// ColorThemeUpdate events.
+extern type ThemeSetHandle = "ffi.UiThemeSet"
+extern fn _default_theme_set() ThemeSetHandle = "UiThemeSetDefault"
+extern fn _run_with_theme_set(root: Widget, ts: ThemeSetHandle) Void = "UiRunWithThemeSet"
+
 // Read a Go ThemeHandle into an Ard Theme struct.
 fn _theme_from_handle(h: ThemeHandle) Theme {
   Theme{
@@ -218,8 +228,22 @@ fn provider_theme(theme: Theme, child: Widget) Widget {
   _provider_theme(_theme_to_handle(theme), child)
 }
 
-fn run_with_theme(root: Widget, theme: Theme) Void!Str {
-  Result::ok(_run_with_theme(root, _theme_to_handle(theme)))
+fn run_with_theme(root: Widget, theme: Theme) Void {
+  _run_with_theme(root, _theme_to_handle(theme))
+}
+
+// ThemeSet: a (light, dark) Theme pair that vaxis swaps between in
+// response to terminal ColorThemeUpdate events.
+struct ThemeSet {
+  handle: ThemeSetHandle,
+}
+
+fn default_theme_set() ThemeSet {
+  ThemeSet{handle: _default_theme_set()}
+}
+
+fn run_with_theme_set(root: Widget, ts: ThemeSet) Void {
+  _run_with_theme_set(root, ts.handle)
 }
 
 fn build_theme(
