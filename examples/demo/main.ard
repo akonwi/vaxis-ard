@@ -566,16 +566,21 @@ fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Wi
   mut tabs: [ui::Widget] = []
   mut i = 0
   while i < 6 {
-    if i > 0 {
+    // Freeze the loop counter as an immutable per-iteration binding;
+    // otherwise every tab's on_pressed would capture the same live
+    // `mut i` by reference and set state.page to its post-loop value
+    // (see AGENTS.md — Closures capture `mut` by reference).
+    let tab_index = i
+    if tab_index > 0 {
       tabs.push(ui::sized_box(1, 1, ui::text("")))
     }
     mut tab_theme = theme
-    if i == page {
+    if tab_index == page {
       tab_theme.surface = theme.primary
       tab_theme.surface_hovered = theme.primary_hovered
     }
-    tabs.push(ui::provider_theme(tab_theme, ui::button(page_name(i), fn(ctx: ui::EventContext) {
-      state.set(fn(mut s: DemoState) { s.page = i })
+    tabs.push(ui::provider_theme(tab_theme, ui::button(page_name(tab_index), fn(ctx: ui::EventContext) {
+      state.set(fn(mut s: DemoState) { s.page = tab_index })
     })))
     i = i + 1
   }
