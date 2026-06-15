@@ -887,8 +887,19 @@ extern fn _stateful<$T>(
 extern fn _state_value<$T>(ctx: StateHandle) $T   = "UiStateValue"
 extern fn _state_set_value<$T>(ctx: StateHandle, value: $T) Void   = "UiStateSetValue"
 
+// Runtime is vaxis/ui's UI-thread dispatcher. We type it by `$T` so
+// dispatched callbacks get `State<$T>` directly.
+extern type RuntimeHandle = "ui.Runtime"
+extern fn _build_context_runtime(ctx: BuildContextHandle) RuntimeHandle = "UiBuildContextRuntime"
+extern fn _runtime_dispatch(
+  runtime: RuntimeHandle,
+  state: StateHandle,
+  callback: fn(StateHandle),
+) Void = "UiRuntimeDispatch"
+
 struct BuildContext {
   handle: BuildContextHandle,
+  state: StateHandle?,
 }
 
 struct State<$T> {
@@ -907,6 +918,37 @@ impl State {
   }
 }
 
+// Runtime<$T> is a typed re-entry point for background work to update state.
+// Get one via `ctx.runtime<$T>()` from inside `stateful`'s `init` or `build`.
+struct Runtime<$T> {
+  handle: RuntimeHandle,
+  state: StateHandle?,
+}
+
+impl Runtime {
+  // Schedule `callback` on the UI thread. The callback receives the
+  // typed `State<$T>` so it can call `.set(...)` directly. If the
+  // owning stateful widget has unmounted, the dispatch is a no-op.
+  fn dispatch(callback: fn(State<$T>)) {
+    match self.state {
+      h => _runtime_dispatch(
+        self.handle,
+        h,
+        fn(state_handle: StateHandle) {
+          callback(State{handle: state_handle})
+        },
+      ),
+      _ => {},
+    }
+  }
+}
+
+impl BuildContext {
+  fn runtime<$T>() Runtime<$T> {
+    Runtime{handle: _build_context_runtime(self.handle), state: self.state}
+  }
+}
+
 fn stateful<$T>(
   key: Str,
   init: fn(BuildContext) $T,
@@ -915,10 +957,13 @@ fn stateful<$T>(
   _stateful(
     key: key,
     init: fn(build_ctx: BuildContextHandle, state_handle: StateHandle) $T {
-      init(BuildContext{handle: build_ctx})
+      init(BuildContext{handle: build_ctx, state: state_handle})
     },
     build: fn(build_ctx: BuildContextHandle, state_handle: StateHandle) Widget {
-      build(BuildContext{handle: build_ctx}, State{handle: state_handle})
+      build(
+        BuildContext{handle: build_ctx, state: state_handle},
+        State{handle: state_handle},
+      )
     },
   )
 }

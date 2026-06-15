@@ -11,10 +11,13 @@ import (
 type UiEventContext = ui.EventContext
 
 // UiStateContext holds the typed state value for a stateful widget.
+// `disposed` flips to true on unmount so background fibers calling
+// rt.Dispatch become silent no-ops.
 type UiStateContext struct {
 	Value          any
 	markNeedsBuild func()
 	sb             *ui.StateBase
+	disposed       bool
 }
 
 func UiStateValue[T any](ctx any) T {
@@ -134,6 +137,12 @@ func (s *uiStatefulState[T]) Build(ctx ui.BuildContext) ui.Widget {
 		s.state.Value = s.widget.Init(ctx, s.state)
 	}
 	return s.widget.Build(ctx, s.state)
+}
+
+func (s *uiStatefulState[T]) Dispose() {
+	if s.state != nil {
+		s.state.disposed = true
+	}
 }
 
 func UiStateSetValue[T any](ctx any, value T) {
@@ -501,8 +510,26 @@ func UiBuildContextRuntime(ctx ui.BuildContext) ui.Runtime {
 	return ctx.Runtime()
 }
 
-func UiRuntimeDispatch(rt ui.Runtime, fn func()) {
-	rt.Dispatch(fn)
+// UiRuntimeDispatch schedules `callback` on the UI runtime, passing the
+// typed state context back to the Ard side. Dispatches after the state's
+// element has been unmounted are silent no-ops.
+//
+// `state` is the opaque StateHandle (`any`) from Ard; we type-assert it
+// to *UiStateContext on entry, matching UiStateValue / UiStateSetValue.
+func UiRuntimeDispatch(rt ui.Runtime, state any, callback func(any)) {
+	if rt == nil || callback == nil || state == nil {
+		return
+	}
+	ctx, ok := state.(*UiStateContext)
+	if !ok || ctx == nil {
+		return
+	}
+	rt.Dispatch(func() {
+		if ctx.disposed {
+			return
+		}
+		callback(ctx)
+	})
 }
 
 // ─── Theme system ────────────────────────────────────────────────────

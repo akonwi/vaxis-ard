@@ -1,5 +1,7 @@
 use vaxis
 use vaxis/ui
+use ard/async
+use ard/duration
 
 // ─── Domain ───────────────────────────────────────────────────────────
 
@@ -8,6 +10,7 @@ struct DemoState {
   name: Str,
   notes: Str,
   count: Int,
+  ticks: Int,
   done: Bool,
   mode: Str,
   dialog_open: Bool,
@@ -15,7 +18,7 @@ struct DemoState {
 
 fn initial_state() DemoState {
   DemoState{
-    page: 0, name: "", notes: "", count: 0,
+    page: 0, name: "", notes: "", count: 0, ticks: 0,
     done: false, mode: "compact", dialog_open: false,
   }
 }
@@ -44,10 +47,7 @@ fn pad_left(s: Str, width: Int) Str {
 
 // ─── Home page ────────────────────────────────────────────────────────
 
-fn home_page() ui::Widget {
-  // ticks placeholder until the goroutine-driven Runtime().Dispatch ticker
-  // piece lands (see upstream demo).
-  let ticks = 0
+fn home_page(ticks: Int) ui::Widget {
   ui::column(
     [
       ui::rich_text(
@@ -320,13 +320,13 @@ fn build_footer(page: Int) ui::Widget {
 
 fn build_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
   match model.page {
-    0 => home_page(),
+    0 => home_page(model.ticks),
     1 => text_page(),
     2 => controls_page(model, state),
     3 => lists_page(),
     4 => table_page(),
     5 => theme_page(),
-    _ => home_page(),
+    _ => home_page(model.ticks),
   }
 }
 
@@ -339,7 +339,20 @@ fn keyboard_shortcuts() [Str:Str] {
 fn root_widget() ui::Widget {
   ui::stateful(
     key: "demo",
-    init: fn(ctx: ui::BuildContext) DemoState { initial_state() },
+    init: fn(ctx: ui::BuildContext) DemoState {
+      let rt = ctx.runtime<DemoState>()
+      // Drive `ticks` from a background fiber to demonstrate Runtime
+      // re-entry (mirrors the upstream Go demo's goroutine + Dispatch).
+      async::start(fn() {
+        while {
+          async::sleep(duration::from_seconds(1))
+          rt.dispatch(fn(state: ui::State<DemoState>) {
+            state.set(fn(mut s: DemoState) { s.ticks = s.ticks + 1 })
+          })
+        }
+      })
+      initial_state()
+    },
     build: fn(ctx: ui::BuildContext, state: ui::State<DemoState>) ui::Widget {
       let model = state.value()
       let theme = ui::must_have_theme(ctx)
