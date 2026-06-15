@@ -359,7 +359,7 @@ fn root_widget() ui::Widget {
       let inner = ui::padding(1, ui::column([
         build_header(model.page, state, theme),
         ui::sized_box(80, 1, ui::text("")),
-        build_page(model, state, theme),
+        ui::padding(1, build_page(model, state, theme)),
         ui::sized_box(80, 1, ui::text("")),
         build_footer(model.page),
       ]))
