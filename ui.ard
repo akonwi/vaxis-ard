@@ -460,9 +460,58 @@ fn bordered_box(fg: Int, bg: Int, attrs: Int, child: Widget) Widget {
 
 // ── Align ─────────────────────────────────────────────────────────────
 
+// vaxis Alignment is { X, Y int } where each is -1 / 0 / 1. The 9
+// named cardinal combinations are exposed as enum variants; map to
+// (x, y) at the FFI boundary.
+
+enum Alignment {
+  top_left,
+  top_center,
+  top_right,
+  center_left,
+  center,
+  center_right,
+  bottom_left,
+  bottom_center,
+  bottom_right,
+}
+
+impl Alignment {
+  fn to_x() Int {
+    match self {
+      Alignment::top_left      => -1,
+      Alignment::top_center    => 0,
+      Alignment::top_right     => 1,
+      Alignment::center_left   => -1,
+      Alignment::center        => 0,
+      Alignment::center_right  => 1,
+      Alignment::bottom_left   => -1,
+      Alignment::bottom_center => 0,
+      Alignment::bottom_right  => 1,
+    }
+  }
+
+  fn to_y() Int {
+    match self {
+      Alignment::top_left      => -1,
+      Alignment::top_center    => -1,
+      Alignment::top_right     => -1,
+      Alignment::center_left   => 0,
+      Alignment::center        => 0,
+      Alignment::center_right  => 0,
+      Alignment::bottom_left   => 1,
+      Alignment::bottom_center => 1,
+      Alignment::bottom_right  => 1,
+    }
+  }
+}
+
 extern fn _align(child: Widget, x: Int, y: Int) Widget = "UiAlign"
 
-fn align(child: Widget, x: Int, y: Int) Widget { _align(child, x, y) }
+fn align(child: Widget, alignment: Alignment?) Widget {
+  let a = alignment.or(Alignment::center)
+  _align(child, a.to_x(), a.to_y())
+}
 
 // ── ConstrainedBox ────────────────────────────────────────────────────
 
@@ -498,7 +547,10 @@ fn constrained_box(
 
 extern fn _stack(children: [Widget], x: Int, y: Int) Widget = "UiStack"
 
-fn stack(children: [Widget], x: Int, y: Int) Widget { _stack(children, x, y) }
+fn stack(children: [Widget], alignment: Alignment?) Widget {
+  let a = alignment.or(Alignment::center)
+  _stack(children, a.to_x(), a.to_y())
+}
 
 // ── Dialog ────────────────────────────────────────────────────────────
 
@@ -827,9 +879,15 @@ fn checkbox(checked: Bool, label: Str, disabled: Bool?, on_changed: fn(EventCont
 
 extern fn _radio(value: Str, group_value: Str, disabled: Bool, label: Str, on_changed: fn(EventContextHandle, Str)) Widget = "UiRadio"
 
-fn radio(value: Str, group_value: Str, label: Str, on_changed: fn(EventContext, Str)) Widget {
+fn radio(
+  value: Str,
+  group_value: Str,
+  label: Str,
+  on_changed: fn(EventContext, Str),
+  disabled: Bool?,
+) Widget {
   _radio(
-    value, group_value, false, label,
+    value, group_value, disabled.or(false), label,
     fn(ctx: EventContextHandle, next: Str) {
       on_changed(EventContext{handle: ctx}, next)
     },
@@ -870,24 +928,28 @@ extern fn _text_field(
   min_width: Int,
   obscure: Bool,
   on_changed: fn(EventContextHandle, Str),
+  has_on_submitted: Bool,
   on_submitted: fn(EventContextHandle, Str),
 ) Widget = "UiTextField"
 
 fn text_field(
   value: Str,
-  placeholder: Str,
-  min_width: Int,
-  obscure: Bool,
   on_changed: fn(EventContext, Str),
-  on_submitted: fn(EventContext, Str),
+  placeholder: Str?,
+  min_width: Int?,
+  obscure: Bool?,
+  on_submitted: fn(EventContext, Str)?,
 ) Widget {
+  let has_sub = on_submitted.is_some()
+  let sub_cb = on_submitted.or(fn(_c: EventContext, _s: Str) {})
   _text_field(
     value,
-    placeholder,
-    min_width,
-    obscure,
+    placeholder.or(""),
+    min_width.or(0),
+    obscure.or(false),
     fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) },
-    fn(ctx: EventContextHandle, submitted: Str) { on_submitted(EventContext{handle: ctx}, submitted) },
+    has_sub,
+    fn(ctx: EventContextHandle, submitted: Str) { sub_cb(EventContext{handle: ctx}, submitted) },
   )
 }
 
@@ -904,18 +966,18 @@ extern fn _text_area(
 
 fn text_area(
   value: Str,
-  placeholder: Str,
-  min_width: Int,
-  min_height: Int,
-  soft_wrap: Bool,
   on_changed: fn(EventContext, Str),
+  placeholder: Str?,
+  min_width: Int?,
+  min_height: Int?,
+  soft_wrap: Bool?,
 ) Widget {
   _text_area(
     value,
-    placeholder,
-    min_width,
-    min_height,
-    soft_wrap,
+    placeholder.or(""),
+    min_width.or(0),
+    min_height.or(0),
+    soft_wrap.or(false),
     fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) },
   )
 }

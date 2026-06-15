@@ -201,63 +201,126 @@ fn text_page(theme: ui::Theme) ui::Widget {
 
 // ─── Controls page ────────────────────────────────────────────────────
 
-fn controls_page(model: DemoState, state: ui::State<DemoState>) ui::Widget {
-  ui::scroll_view(ui::column([
-    ui::styled_text("Controls", -1, -1, bold()),
-    ui::text("Name:"),
+fn controls_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
+  let set_mode = fn(ctx: ui::EventContext, value: Str) {
+    state.set(fn(mut s: DemoState) { s.mode = value })
+  }
+  ui::column([
+    ui::rich_text(
+      [
+        ui::span("Controls", bold()),
+        ui::span("\nButtons are focusable. Use Tab/Shift+Tab and Enter, or click them with the mouse."),
+      ],
+      soft_wrap: true,
+    ),
+    ui::sized_box(0, 1, ui::text("")),
+    ui::text("Name"),
     ui::text_field(
-      model.name, "type here", 32, false,
-      fn(ctx: ui::EventContext, value: Str) {
+      value: model.name,
+      placeholder: "type here",
+      on_changed: fn(ctx: ui::EventContext, value: Str) {
         state.set(fn(mut s: DemoState) { s.name = value })
       },
-      fn(ctx: ui::EventContext, value: Str) {},
     ),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::text("Notes:"),
+    ui::sized_box(0, 1, ui::text("")),
+    ui::stack(
+      [
+        ui::sized_box(28, 1, ui::decorated_box(
+          -1, theme.surface, bold(),
+          ui::text("Stack base"),
+        )),
+        ui::positioned(18, 0, ui::styled_text("new", theme.accent_text, -1, bold())),
+      ],
+      alignment: ui::Alignment::top_left,
+    ),
+    ui::sized_box(0, 1, ui::text("")),
+    ui::text("Notes"),
     ui::text_area(
-      model.notes, "write a note", 48, 3, true,
-      fn(ctx: ui::EventContext, value: Str) {
+      value: model.notes,
+      placeholder: "write a note",
+      min_height: 2,
+      soft_wrap: true,
+      on_changed: fn(ctx: ui::EventContext, value: Str) {
         state.set(fn(mut s: DemoState) { s.notes = value })
       },
     ),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::row([
-      ui::button("-", fn(ctx: ui::EventContext) {
-        state.set(fn(mut s: DemoState) { s.count = s.count - 1 })
-      }),
-      ui::text("  count: " + model.count.to_str() + "  "),
-      ui::button("+", fn(ctx: ui::EventContext) {
-        state.set(fn(mut s: DemoState) { s.count = s.count + 1 })
-      }),
-      ui::text("  "),
-      ui::button("Notify", fn(ctx: ui::EventContext) {
-        ui::notify(ctx, "", "Hello from Ard + vaxis/ui")
-      }),
-      ui::text("  "),
-      ui::button("Dialog", fn(ctx: ui::EventContext) {
-        state.set(fn(mut s: DemoState) { s.dialog_open = true })
-      }),
-    ]),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::checkbox(
-      model.done, "Use checkmark style", false,
-      fn(ctx: ui::EventContext, checked: Bool) {
-        state.set(fn(mut s: DemoState) { s.done = checked })
-      },
+    ui::sized_box(0, 1, ui::text("")),
+    ui::row(
+      [
+        ui::button("-", fn(ctx: ui::EventContext) {
+          state.set(fn(mut s: DemoState) { s.count = s.count - 1 })
+        }),
+        ui::sized_box(1, 1, ui::text("")),
+        ui::rich_text([ui::span("count: "), ui::span(model.count.to_str(), bold())]),
+        ui::sized_box(1, 1, ui::text("")),
+        ui::button("+", fn(ctx: ui::EventContext) {
+          state.set(fn(mut s: DemoState) { s.count = s.count + 1 })
+        }),
+        ui::sized_box(2, 1, ui::text("")),
+        ui::button("Title", fn(ctx: ui::EventContext) {
+          ui::set_title(ctx, "Vaxis UI demo")
+        }),
+        ui::sized_box(1, 1, ui::text("")),
+        ui::button("Copy notes", fn(ctx: ui::EventContext) {
+          ui::copy(ctx, model.notes)
+        }),
+        ui::sized_box(1, 1, ui::text("")),
+        ui::button("Notify", fn(ctx: ui::EventContext) {
+          ui::notify(ctx, "Vaxis UI demo", "Notification from the controls page")
+        }),
+        ui::sized_box(1, 1, ui::text("")),
+        ui::button("Dialog", fn(ctx: ui::EventContext) {
+          state.set(fn(mut s: DemoState) { s.dialog_open = true })
+        }),
+      ],
+      cross_align: ui::CrossAlign::center,
     ),
-    ui::text("  checkbox: " + checkbox_label(model.done)),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::radio("compact", model.mode, "Compact", fn(ctx: ui::EventContext, value: Str) {
-      state.set(fn(mut s: DemoState) { s.mode = value })
-    }),
-    ui::radio("cozy", model.mode, "Cozy", fn(ctx: ui::EventContext, value: Str) {
-      state.set(fn(mut s: DemoState) { s.mode = value })
-    }),
-    ui::radio("spacious", model.mode, "Spacious", fn(ctx: ui::EventContext, value: Str) {
-      state.set(fn(mut s: DemoState) { s.mode = value })
-    }),
-    ui::text("  radio: " + model.mode),
-  ]))
+    ui::row(
+      [
+        ui::checkbox(
+          checked: model.done,
+          label: "Use checkmark style",
+          on_changed: fn(ctx: ui::EventContext, checked: Bool) {
+            state.set(fn(mut s: DemoState) { s.done = checked })
+          },
+        ),
+        ui::sized_box(2, 1, ui::text("")),
+        ui::rich_text([ui::span("checkbox: "), ui::span(checkbox_label(model.done), bold())]),
+        ui::sized_box(2, 1, ui::text("")),
+        ui::checkbox(
+          checked: false,
+          label: "Disabled",
+          disabled: true,
+          on_changed: fn(ctx: ui::EventContext, checked: Bool) {},
+        ),
+      ],
+      cross_align: ui::CrossAlign::center,
+    ),
+    ui::row(
+      [
+        ui::radio("compact", model.mode, "Compact", set_mode),
+        ui::sized_box(1, 1, ui::text("")),
+        ui::radio("cozy", model.mode, "Cozy", set_mode),
+        ui::sized_box(1, 1, ui::text("")),
+        ui::radio("spacious", model.mode, "Spacious", set_mode),
+        ui::sized_box(1, 1, ui::text("")),
+        ui::radio(
+          value: "disabled",
+          group_value: model.mode,
+          label: "Disabled",
+          on_changed: set_mode,
+          disabled: true,
+        ),
+        ui::sized_box(2, 1, ui::text("")),
+        ui::rich_text([ui::span("radio: "), ui::span(model.mode, bold())]),
+      ],
+      cross_align: ui::CrossAlign::center,
+    ),
+    ui::align(
+      ui::text("aligned right inside the page"),
+      alignment: ui::Alignment::center_right,
+    ),
+  ])
 }
 
 // ─── Lists page ───────────────────────────────────────────────────────
@@ -417,7 +480,7 @@ fn build_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
   match model.page {
     0 => home_page(model.ticks),
     1 => text_page(theme),
-    2 => controls_page(model, state),
+    2 => controls_page(model, state, theme),
     3 => lists_page(),
     4 => table_page(),
     5 => theme_page(),

@@ -216,15 +216,25 @@ func UiDivider() ui.Widget {
 
 // ─── Text input ───────────────────────────────────────────────────────
 
-func UiTextField(value, placeholder string, minWidth int, obscure bool, onChanged func(ui.EventContext, string), onSubmitted func(ui.EventContext, string)) ui.Widget {
-	return ui.TextField{
+func UiTextField(
+	value, placeholder string,
+	minWidth int,
+	obscure bool,
+	onChanged func(ui.EventContext, string),
+	hasOnSubmitted bool,
+	onSubmitted func(ui.EventContext, string),
+) ui.Widget {
+	f := ui.TextField{
 		Value:       value,
 		Placeholder: placeholder,
 		MinWidth:    minWidth,
 		ObscureText: obscure,
 		OnChanged:   onChanged,
-		OnSubmitted: onSubmitted,
 	}
+	if hasOnSubmitted {
+		f.OnSubmitted = onSubmitted
+	}
+	return f
 }
 
 func UiTextArea(value, placeholder string, minWidth, minHeight int, softWrap bool, onChanged func(ui.EventContext, string)) ui.Widget {
