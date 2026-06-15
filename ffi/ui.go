@@ -310,35 +310,63 @@ func UiSelectionContainer(child ui.Widget, disabled bool) ui.Widget {
 }
 
 type UiCommandPaletteItem struct {
-	Title       string
-	Description string
-	Aliases     []string
+	Title         string
+	Description   string
+	Aliases       []string
+	HasOnSelected bool
+	OnSelected    func(ui.EventContext)
 }
 
-func UiCommandPalette(items []UiCommandPaletteItem, placeholder string, emptyText string, width int, maxVisibleRows int, onDismiss func(ui.EventContext), onSelected func(ui.EventContext, string)) ui.Widget {
+// UiCommandPalette wires each per-item OnSelected if set; the global
+// OnSelected fires after the per-item one and receives the item title
+// (so an Ard caller can do any extra bookkeeping in one place).
+func UiCommandPalette(
+	items []UiCommandPaletteItem,
+	placeholder, emptyText string,
+	width, maxVisibleRows int,
+	hasOnDismiss bool, onDismiss func(ui.EventContext),
+	hasOnSelected bool, onSelected func(ui.EventContext, string),
+) ui.Widget {
 	built := make([]ui.CommandPaletteItem, len(items))
 	for i, item := range items {
-		built[i] = ui.CommandPaletteItem{
+		entry := ui.CommandPaletteItem{
 			Title:       item.Title,
 			Description: item.Description,
 			Aliases:     item.Aliases,
 		}
+		if item.HasOnSelected {
+			entry.OnSelected = item.OnSelected
+		}
+		built[i] = entry
 	}
-	return ui.CommandPalette{
+	palette := ui.CommandPalette{
 		Items:          built,
 		Placeholder:    placeholder,
 		EmptyText:      emptyText,
 		Width:          width,
 		MaxVisibleRows: maxVisibleRows,
-		OnDismiss:      onDismiss,
-		OnSelected: func(ctx ui.EventContext, item ui.CommandPaletteItem) {
-			onSelected(ctx, item.Title)
-		},
 	}
+	if hasOnDismiss {
+		palette.OnDismiss = onDismiss
+	}
+	if hasOnSelected {
+		palette.OnSelected = func(ctx ui.EventContext, item ui.CommandPaletteItem) {
+			onSelected(ctx, item.Title)
+		}
+	}
+	return palette
 }
 
-func UiMakeCmdItem(title, description string, aliases []string) UiCommandPaletteItem {
-	return UiCommandPaletteItem{Title: title, Description: description, Aliases: aliases}
+func UiMakeCmdItem(
+	title, description string,
+	aliases []string,
+	hasOnSelected bool,
+	onSelected func(ui.EventContext),
+) UiCommandPaletteItem {
+	return UiCommandPaletteItem{
+		Title: title, Description: description, Aliases: aliases,
+		HasOnSelected: hasOnSelected, OnSelected: onSelected,
+	}
 }
 
 type UiTableColumn struct {

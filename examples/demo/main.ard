@@ -15,6 +15,7 @@ struct DemoState {
   done: Bool,
   mode: Str,
   dialog_open: Bool,
+  palette_open: Bool,
   chat: Str,
   logs: [Str],
   anim: ui::AnimationController?,
@@ -23,7 +24,7 @@ struct DemoState {
 fn initial_state() DemoState {
   DemoState{
     page: 0, name: "", notes: "", count: 0, ticks: 0,
-    done: false, mode: "compact", dialog_open: false,
+    done: false, mode: "compact", dialog_open: false, palette_open: false,
     chat: "",
     logs: [
       "Ada: welcome to the echo log",
@@ -39,6 +40,7 @@ fn demo_quit() Str { "demo.quit" }
 fn demo_next() Str { "demo.next-page" }
 fn demo_prev() Str { "demo.previous-page" }
 fn demo_dialog() Str { "demo.toggle-dialog" }
+fn demo_palette() Str { "demo.command-palette" }
 
 fn checkbox_label(checked: Bool) Str {
   if checked { "checked" } else { "unchecked" }
@@ -767,25 +769,21 @@ fn go_to_page(model: DemoState, state: ui::State<DemoState>, target: Int) {
 
 fn build_header(page: Int, model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
   mut tabs: [ui::Widget] = []
-  mut i = 0
-  while i < page_count() {
-    // Freeze the loop counter as an immutable per-iteration binding;
-    // otherwise every tab's on_pressed would capture the same live
-    // `mut i` by reference and set state.page to its post-loop value
-    // (see AGENTS.md — Closures capture `mut` by reference).
-    let tab_index = i
-    if tab_index > 0 {
+  // Ard `..` is inclusive on both ends; use n-1 for n iterations.
+  // `for` provides an immutable per-iteration `i`, so closures capture
+  // the right value automatically (no `let frozen = i` needed).
+  for i in 0..(page_count() - 1) {
+    if i > 0 {
       tabs.push(ui::sized_box(1, 1, ui::text("")))
     }
     mut tab_theme = theme
-    if tab_index == page {
+    if i == page {
       tab_theme.surface = theme.primary
       tab_theme.surface_hovered = theme.primary_hovered
     }
-    tabs.push(ui::provider_theme(tab_theme, ui::button(page_name(tab_index), fn(ctx: ui::EventContext) {
-      go_to_page(model, state, tab_index)
+    tabs.push(ui::provider_theme(tab_theme, ui::button(page_name(i), fn(ctx: ui::EventContext) {
+      go_to_page(model, state, i)
     })))
-    i = i + 1
   }
   ui::column([
     ui::rich_text([
@@ -829,7 +827,80 @@ fn build_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
 // ─── Root widget ──────────────────────────────────────────────────────
 
 fn keyboard_shortcuts() [Str:Str] {
-  ["q": demo_quit(), "n": demo_next(), "p": demo_prev(), "d": demo_dialog()]
+  [
+    "q": demo_quit(),
+    "n": demo_next(),
+    "p": demo_prev(),
+    "d": demo_dialog(),
+    "Alt+k": demo_palette(),
+  ]
+}
+
+// Build the full set of command palette entries: one per page +
+// dialog, animation, notify, quit.
+fn build_palette_items(model: DemoState, state: ui::State<DemoState>) [ui::CmdItem] {
+  mut items: [ui::CmdItem] = []
+  // Ard `..` is inclusive on both ends; use n-1 for n iterations.
+  for i in 0..(page_count() - 1) {
+    let label = page_name(i)
+    let slug = page_slug(i)
+    items.push(ui::cmd_item(
+      title: "Go to " + label,
+      description: "Open the " + slug + " demo page",
+      aliases: [slug, "page"],
+      on_selected: fn(ctx: ui::EventContext) {
+        state.set(fn(mut s: DemoState) {
+          s.page = i
+          s.palette_open = false
+        })
+        if i == animation_page_index() {
+          match model.anim {
+            ctrl => ui::anim_forward(ctrl),
+            _ => {},
+          }
+        }
+      },
+    ))
+  }
+  items.push(ui::cmd_item(
+    title: "Open dialog",
+    description: "Show the modal dialog example",
+    aliases: ["modal"],
+    on_selected: fn(ctx: ui::EventContext) {
+      state.set(fn(mut s: DemoState) {
+        s.palette_open = false
+        s.dialog_open = true
+      })
+    },
+  ))
+  items.push(ui::cmd_item(
+    title: "Replay animation",
+    description: "Start the animation controller",
+    aliases: ["play"],
+    on_selected: fn(ctx: ui::EventContext) {
+      match model.anim {
+        ctrl => ui::anim_forward(ctrl),
+        _ => {},
+      }
+      state.set(fn(mut s: DemoState) { s.palette_open = false })
+    },
+  ))
+  items.push(ui::cmd_item(
+    title: "Send notification",
+    description: "Show a demo notification",
+    aliases: ["notify"],
+    on_selected: fn(ctx: ui::EventContext) {
+      ui::notify(ctx, "Vaxis UI demo", "Command palette action")
+      state.set(fn(mut s: DemoState) { s.palette_open = false })
+    },
+  ))
+  items.push(ui::cmd_item(
+    title: "Quit",
+    description: "Exit the demo",
+    aliases: ["exit"],
+    on_selected: fn(ctx: ui::EventContext) { ui::quit(ctx) },
+  ))
+  items
 }
 
 fn root_widget() ui::Widget {
@@ -882,10 +953,27 @@ fn root_widget() ui::Widget {
             state.set(fn(mut s: DemoState) { s.dialog_open = not s.dialog_open })
             ui::EventResult::handled
           }),
+          ui::action(demo_palette(), fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
+            state.set(fn(mut s: DemoState) { s.palette_open = true })
+            ui::EventResult::handled
+          }),
         ]),
         keyboard_shortcuts(),
       )
 
+      // Stack overlays in the same order upstream does: palette first,
+      // then dialog. ui::overlay collapses to the body when entries is
+      // empty.
+      mut entries: [ui::OverlayEntry] = []
+      if model.palette_open {
+        let palette = ui::command_palette(
+          items: build_palette_items(model, state),
+          on_dismiss: fn(ctx: ui::EventContext) {
+            state.set(fn(mut s: DemoState) { s.palette_open = false })
+          },
+        )
+        entries.push(ui::overlay_entry(palette, true, 0, 0))
+      }
       if model.dialog_open {
         let dialog_content = ui::dialog(
           "Demo dialog",
@@ -906,10 +994,9 @@ fn root_widget() ui::Widget {
             state.set(fn(mut s: DemoState) { s.dialog_open = false })
           },
         )
-        ui::overlay_modal(body, dialog_content)
-      } else {
-        body
+        entries.push(ui::overlay_entry(dialog_content, true, 0, 0))
       }
+      ui::overlay(body, entries)
     },
   )
 }

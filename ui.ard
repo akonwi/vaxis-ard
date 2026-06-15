@@ -754,28 +754,61 @@ extern fn _command_palette(
   empty_text: Str,
   width: Int,
   max_visible_rows: Int,
-  on_dismiss: fn(EventContextHandle),
-  on_selected: fn(EventContextHandle, Str),
+  has_on_dismiss: Bool, on_dismiss: fn(EventContextHandle),
+  has_on_selected: Bool, on_selected: fn(EventContextHandle, Str),
 ) Widget = "UiCommandPalette"
-extern fn _cmd_item(title: Str, description: Str, aliases: [Str]) CmdItem = "UiMakeCmdItem"
+extern fn _cmd_item(
+  title: Str,
+  description: Str,
+  aliases: [Str],
+  has_on_selected: Bool,
+  on_selected: fn(EventContextHandle),
+) CmdItem = "UiMakeCmdItem"
 
-fn cmd_item(title: Str, description: Str) CmdItem {
-  _cmd_item(title, description, [])
+// title is required. description, aliases, and on_selected are all
+// optional. on_selected is the per-item activation callback (matches
+// vaxis CommandPaletteItem.OnSelected); the palette's overall
+// on_selected (passed to command_palette) fires after this one.
+fn cmd_item(
+  title: Str,
+  description: Str?,
+  aliases: [Str]?,
+  on_selected: fn(EventContext)?,
+) CmdItem {
+  let has_cb = on_selected.is_some()
+  let cb = on_selected.or(fn(_c: EventContext) {})
+  _cmd_item(
+    title,
+    description.or(""),
+    aliases.or([]),
+    has_cb,
+    fn(ctx: EventContextHandle) { cb(EventContext{handle: ctx}) },
+  )
 }
 
 fn command_palette(
   items: [CmdItem],
-  placeholder: Str,
-  empty_text: Str,
-  width: Int,
-  max_visible_rows: Int,
-  on_dismiss: fn(EventContext),
-  on_selected: fn(EventContext, Str),
+  placeholder: Str?,
+  empty_text: Str?,
+  width: Int?,
+  max_visible_rows: Int?,
+  on_dismiss: fn(EventContext)?,
+  on_selected: fn(EventContext, Str)?,
 ) Widget {
+  let has_dismiss = on_dismiss.is_some()
+  let dismiss_cb = on_dismiss.or(fn(_c: EventContext) {})
+  let has_select = on_selected.is_some()
+  let select_cb = on_selected.or(fn(_c: EventContext, _t: Str) {})
   _command_palette(
-    items, placeholder, empty_text, width, max_visible_rows,
-    fn(ctx: EventContextHandle) { on_dismiss(EventContext{handle: ctx}) },
-    fn(ctx: EventContextHandle, title: Str) { on_selected(EventContext{handle: ctx}, title) },
+    items,
+    placeholder.or(""),
+    empty_text.or(""),
+    width.or(0),
+    max_visible_rows.or(0),
+    has_dismiss,
+    fn(ctx: EventContextHandle) { dismiss_cb(EventContext{handle: ctx}) },
+    has_select,
+    fn(ctx: EventContextHandle, title: Str) { select_cb(EventContext{handle: ctx}, title) },
   )
 }
 
