@@ -131,6 +131,104 @@ python3 examples/tic-tac-toe/test_tic_tac_toe.py
 Run the relevant smoke test after each round of binding changes to validate
 nothing regressed.
 
+## API design principles
+
+These guide every new binding and refactor. When a change conflicts with one,
+flag it explicitly in the PR description.
+
+### 1. One configurable function, not many single-purpose variants
+
+Do **not** ship `row_end`, `row_center`, `column_stretch`, `flex_stretch`,
+etc. Instead ship one `row` / `column` / `flex` that takes optional knobs:
+
+```ard
+fn row(
+  children: [Widget],
+  main_align: MainAlign?,
+  cross_align: CrossAlign?,
+  main_size: MainSize?,
+) Widget
+```
+
+Callers omit trailing nullable args they don't care about. This keeps the
+public surface small and predictable as more knobs get exposed.
+
+### 2. Typed Ard enums over raw `Int` constants for option values
+
+Do **not** expose `let MAIN_ALIGN_CENTER = 2` style constants in the public
+API. Define an Ard enum and convert to int at the FFI boundary:
+
+```ard
+enum MainAlign { start, end, center, between, around, evenly }
+
+impl MainAlign {
+  fn to_int() Int {
+    match self {
+      MainAlign::start  => 0,
+      MainAlign::end    => 1,
+      MainAlign::center => 2,
+      // ...
+    }
+  }
+}
+```
+
+The vaxis numeric encoding stays an FFI implementation detail. Callers get
+compile-time safety and can't pass a meaningless integer.
+
+### 3. Nullable params + `.or(default)` for ergonomic defaults
+
+For any binding with optional configuration, prefer:
+
+```ard
+fn rich_text(spans: [TextSpan], soft_wrap: Bool?) Widget {
+  _rich_text(spans, soft_wrap.or(false))
+}
+```
+
+Over pattern A (`match` with `_ => {}`) or pattern B (`if is_some { … }`
+followed by manual assignment). `.or(default)` is the idiomatic unwrap
+when all you want is a fallback.
+
+Trailing nullable args can be omitted at the call site; non-trailing
+omission requires labelled args.
+
+### 4. Public API in Ard-native types; conversion at the FFI boundary
+
+The externs (private, underscore-prefixed) take whatever shape vaxis
+needs — ints for enums, opaque handles for Go structs, etc. The public
+wrapper does the conversion:
+
+```ard
+extern fn _flex(axis: Int, main_size: Int, ..., children: [Widget]) Widget = "UiFlex"
+
+fn flex(axis: Axis, children: [Widget], ...) Widget {
+  _flex(axis.to_int(), ..., children)
+}
+```
+
+The FFI shape is never the user-facing shape.
+
+### 5. Match vaxis defaults at the boundary unless there's a clear TUI reason not to
+
+When filling defaults inside a wrapper, prefer the upstream vaxis zero
+value. Deviations are allowed but must be documented in a code comment
+right above the default. Example:
+
+```ard
+// column defaults to CrossAlign::stretch (TUI columns almost always
+// want children stretched to full width).
+fn column(...) Widget {
+  _flex(..., cross_align.or(CrossAlign::stretch).to_int(), ...)
+}
+```
+
+### 6. Drop legacy variants when refactoring; this library is not yet published
+
+No deprecation periods, no aliasing the old names. Delete and migrate
+call sites in the same change. Examples in `examples/` are part of the
+refactor.
+
 ## Ard conventions for this project
 
 - Use `ard/result` and `ard/maybe` for error handling and optionality
