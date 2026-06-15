@@ -288,8 +288,8 @@ extern fn _flex(axis: Int, main_size: Int, main_align: Int, cross_align: Int, ch
 
 let AXIS_HORIZONTAL = 0
 let AXIS_VERTICAL = 1
-let MAIN_SIZE_MAX = 0
-let MAIN_SIZE_MIN = 1
+let MAIN_SIZE_MIN = 0
+let MAIN_SIZE_MAX = 1
 let MAIN_ALIGN_START = 0
 let MAIN_ALIGN_END = 1
 let MAIN_ALIGN_CENTER = 2
@@ -307,6 +307,14 @@ fn flex(axis: Int, children: [Widget]) Widget {
 
 fn flex_stretch(axis: Int, children: [Widget]) Widget {
   _flex(axis, MAIN_SIZE_MAX, MAIN_ALIGN_START, CROSS_ALIGN_STRETCH, children)
+}
+
+fn row_end(children: [Widget]) Widget {
+  _flex(AXIS_HORIZONTAL, MAIN_SIZE_MAX, MAIN_ALIGN_END, CROSS_ALIGN_START, children)
+}
+
+fn column_stretch(children: [Widget]) Widget {
+  _flex(AXIS_VERTICAL, MAIN_SIZE_MAX, MAIN_ALIGN_START, CROSS_ALIGN_STRETCH, children)
 }
 
 // ── Positioned ────────────────────────────────────────────────────────

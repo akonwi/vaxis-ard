@@ -266,22 +266,22 @@ fn build_header(page: Int, state: ui::State<DemoState>, theme: ui::Theme) ui::Wi
     })))
     i = i + 1
   }
-  ui::column([
+  ui::column_stretch([
     ui::styled_text("Vaxis UI demo", -1, -1, bold()),
     ui::text("n/p pages, Tab focus, q quit"),
-    ui::_flex(0, 0, 2, 0, tabs),
+    ui::row(tabs),
   ])
 }
 
 fn build_footer(page: Int) ui::Widget {
   let total = page_count()
   let label = "page " + (page + 1).to_str() + " / " + total.to_str()
-  ui::align(ui::styled_text(label, -1, -1, dim()), 1, 0)
+  ui::row_end([ui::styled_text(label, -1, -1, dim())])
 }
 
 // ─── Page router ──────────────────────────────────────────────────────
 
-fn build_page(model: DemoState, state: ui::State<DemoState>) ui::Widget {
+fn build_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
   match model.page {
     0 => home_page(),
     1 => text_page(),
@@ -306,13 +306,14 @@ fn root_widget() ui::Widget {
     build: fn(ctx: ui::BuildContext, state: ui::State<DemoState>) ui::Widget {
       let model = state.value()
       let theme = ui::must_have_theme(ctx)
-      let content = ui::column([
+      let inner = ui::padding(1, ui::column_stretch([
         build_header(model.page, state, theme),
         ui::sized_box(80, 1, ui::text("")),
-        build_page(model, state),
+        build_page(model, state, theme),
         ui::sized_box(80, 1, ui::text("")),
         build_footer(model.page),
-      ])
+      ]))
+      let content = ui::decorated_box(theme.foreground, theme.background, 0, inner)
 
       let body = ui::shortcuts(
         ui::actions(ui::focus(content), [
