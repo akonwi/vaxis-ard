@@ -398,24 +398,49 @@ func UiProgressBar(value float64, width int, filledFg, filledBg, filledUlColor, 
 	}
 }
 
+// UiTextSpan carries a single styled run of text across the FFI boundary.
+// HasOnPressed gates whether OnPressed is wired (vs. left nil so vaxis
+// doesn't apply its interactive-style affordance to non-clickable spans).
 type UiTextSpan struct {
-	Text           string
+	Text                            string
 	Fg, Bg, UlColor, UlStyle, Attrs int
+	Hyperlink                       string
+	HasOnPressed                    bool
+	OnPressed                       func(ui.EventContext)
 }
 
 func UiRichText(spans []UiTextSpan, softWrap bool) ui.Widget {
 	s := make([]ui.TextSpan, len(spans))
 	for i, sp := range spans {
-		s[i] = ui.TextSpan{
-			Text:  sp.Text,
-			Style: decodeUiStyle(sp.Fg, sp.Bg, sp.UlColor, sp.UlStyle, sp.Attrs),
+		style := decodeUiStyle(sp.Fg, sp.Bg, sp.UlColor, sp.UlStyle, sp.Attrs)
+		if sp.Hyperlink != "" {
+			style.Hyperlink = sp.Hyperlink
+		}
+		s[i] = ui.TextSpan{Text: sp.Text, Style: style}
+		if sp.HasOnPressed {
+			s[i].OnPressed = sp.OnPressed
 		}
 	}
 	return ui.RichText{Spans: s, SoftWrap: softWrap}
 }
 
-func UiMakeSpan(text string, fg, bg, attrs int) UiTextSpan {
-	return UiTextSpan{Text: text, Fg: fg, Bg: bg, Attrs: attrs}
+func UiMakeSpan(
+	text string,
+	attrs, fg, bg, ulStyle int,
+	hyperlink string,
+	hasOnPressed bool,
+	onPressed func(ui.EventContext),
+) UiTextSpan {
+	return UiTextSpan{
+		Text:         text,
+		Attrs:        attrs,
+		Fg:           fg,
+		Bg:           bg,
+		UlStyle:      ulStyle,
+		Hyperlink:    hyperlink,
+		HasOnPressed: hasOnPressed,
+		OnPressed:    onPressed,
+	}
 }
 
 // ─── Scroll ───────────────────────────────────────────────────────────

@@ -672,10 +672,48 @@ fn progress_bar(value: Float, width: Int, filled_bg: Int, empty_bg: Int) Widget 
 extern type TextSpan = "ffi.UiTextSpan"
 
 extern fn _rich_text(spans: [TextSpan], soft_wrap: Bool) Widget = "UiRichText"
-extern fn _span(text: Str, fg: Int, bg: Int, attrs: Int) TextSpan = "UiMakeSpan"
+extern fn _span(
+  text: Str,
+  attrs: Int,
+  fg: Int,
+  bg: Int,
+  ul_style: Int,
+  hyperlink: Str,
+  has_on_pressed: Bool,
+  on_pressed: fn(EventContextHandle),
+) TextSpan = "UiMakeSpan"
 
-fn span(text: Str, attrs: Int) TextSpan {
-  _span(text, -1, -1, attrs)
+// Build a styled run of text for use in rich_text. Everything past the
+// text itself is optional:
+//   attrs       — vaxis attribute bitmask (use bold(), italic() helpers)
+//   fg / bg     — colors; -1 means "inherit from theme"
+//   underline   — true sets single underline (most common case)
+//   hyperlink   — OSC 8 URL; turns the span into a terminal link
+//   on_pressed  — mouse/keyboard activation callback
+fn span(
+  text: Str,
+  attrs: Int?,
+  fg: Int?,
+  bg: Int?,
+  underline: Bool?,
+  hyperlink: Str?,
+  on_pressed: fn(EventContext)?,
+) TextSpan {
+  let has_cb = on_pressed.is_some()
+  let cb = on_pressed.or(fn(_: EventContext) {})
+  let wrapped_cb = fn(c: EventContextHandle) { cb(EventContext{handle: c}) }
+  mut ul_style = 0
+  if underline.or(false) { ul_style = 1 }
+  _span(
+    text,
+    attrs.or(0),
+    fg.or(-1),
+    bg.or(-1),
+    ul_style,
+    hyperlink.or(""),
+    has_cb,
+    wrapped_cb,
+  )
 }
 
 fn rich_text(spans: [TextSpan], soft_wrap: Bool?) Widget {
