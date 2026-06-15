@@ -573,17 +573,45 @@ fn modal_barrier(bg: Int, opacity: Int) Widget {
 
 // ── ListTile ──────────────────────────────────────────────────────────
 
-extern fn _list_tile(title: Widget, selected: Bool, disabled: Bool, on_pressed: fn(EventContextHandle)) Widget = "UiListTile"
+extern fn _list_tile(
+  title: Widget,
+  selected: Bool,
+  disabled: Bool,
+  has_leading: Bool, leading: Widget,
+  has_subtitle: Bool, subtitle: Widget,
+  has_trailing: Bool, trailing: Widget,
+  has_on_pressed: Bool, on_pressed: fn(EventContextHandle),
+) Widget = "UiListTile"
 
-fn list_tile(title: Widget, selected: Bool, disabled: Bool?, on_pressed: fn(EventContext)) Widget {
-  mut d = false
-  match disabled {
-    v => { d = v },
-    _ => {},
-  }
+fn list_tile(
+  title: Widget,
+  leading: Widget?,
+  subtitle: Widget?,
+  trailing: Widget?,
+  selected: Bool?,
+  disabled: Bool?,
+  on_pressed: fn(EventContext)?,
+) Widget {
+  let has_l = leading.is_some()
+  let has_s = subtitle.is_some()
+  let has_t = trailing.is_some()
+  let has_p = on_pressed.is_some()
+  // When a slot isn't set we still need to pass *some* widget across the
+  // FFI; reuse `title` as a harmless filler — the Go side ignores it when
+  // the corresponding has_* flag is false.
+  let l = leading.or(title)
+  let s = subtitle.or(title)
+  let t = trailing.or(title)
+  let p = on_pressed.or(fn(_c: EventContext) {})
   _list_tile(
-    title, selected, d,
-    fn(ctx: EventContextHandle) { on_pressed(EventContext{handle: ctx}) },
+    title,
+    selected.or(false),
+    disabled.or(false),
+    has_l, l,
+    has_s, s,
+    has_t, t,
+    has_p,
+    fn(ctx: EventContextHandle) { p(EventContext{handle: ctx}) },
   )
 }
 
@@ -1045,11 +1073,22 @@ extern fn _scroll_controller_scroll_to_offset(controller: ScrollController, row:
 extern fn _scroll_controller_scroll_to_start(controller: ScrollController) Bool = "UiScrollControllerScrollToStart"
 extern fn _scroll_controller_scroll_to_end(controller: ScrollController) Bool = "UiScrollControllerScrollToEnd"
 
-extern fn _custom_scroll_view(controller: ScrollController, slivers: [Widget]) Widget = "UiCustomScrollView"
+extern fn _custom_scroll_view(
+  controller: ScrollController,
+  slivers: [Widget],
+  follow_output: Bool,
+) Widget = "UiCustomScrollView"
 extern fn _sliver_to_box(child: Widget) Widget = "UiSliverToBox"
 extern fn _sliver_pinned_header(child: Widget) Widget = "UiSliverPinnedHeader"
 extern fn _sliver_fill_remaining(child: Widget) Widget = "UiSliverFillRemaining"
 extern fn _sliver_list(children: [Widget]) Widget = "UiSliverList"
+extern fn _sliver_list_builder(
+  count: Int,
+  item_extent: Int,
+  estimated_item_extent: Int,
+  overscan: Int,
+  builder: fn(BuildContextHandle, Int) Widget,
+) Widget = "UiSliverListBuilder"
 
 fn scroll_controller() ScrollController { _scroll_controller() }
 fn scroll_controller_scroll_by_lines(c: ScrollController, lines: Int) Bool { _scroll_controller_scroll_by_lines(c, lines) }
@@ -1057,14 +1096,39 @@ fn scroll_controller_scroll_to_offset(c: ScrollController, row: Int) Bool { _scr
 fn scroll_controller_scroll_to_start(c: ScrollController) Bool { _scroll_controller_scroll_to_start(c) }
 fn scroll_controller_scroll_to_end(c: ScrollController) Bool { _scroll_controller_scroll_to_end(c) }
 
-fn custom_scroll_view(controller: ScrollController, slivers: [Widget]) Widget {
-  _custom_scroll_view(controller, slivers)
+fn custom_scroll_view(
+  controller: ScrollController,
+  slivers: [Widget],
+  follow_output: Bool?,
+) Widget {
+  _custom_scroll_view(controller, slivers, follow_output.or(false))
 }
 
 fn sliver_to_box(child: Widget) Widget { _sliver_to_box(child) }
 fn sliver_pinned_header(child: Widget) Widget { _sliver_pinned_header(child) }
 fn sliver_fill_remaining(child: Widget) Widget { _sliver_fill_remaining(child) }
 fn sliver_list(children: [Widget]) Widget { _sliver_list(children) }
+
+// Lazy/index-based sliver. Set item_extent for fixed-height rows or
+// estimated_item_extent for variable-height; leave both zero for the
+// vaxis default. `builder(ctx, i)` is invoked per visible row.
+fn sliver_list_builder(
+  count: Int,
+  builder: fn(BuildContext, Int) Widget,
+  item_extent: Int?,
+  estimated_item_extent: Int?,
+  overscan: Int?,
+) Widget {
+  _sliver_list_builder(
+    count,
+    item_extent.or(0),
+    estimated_item_extent.or(0),
+    overscan.or(0),
+    fn(ctx: BuildContextHandle, i: Int) Widget {
+      builder(BuildContext{handle: ctx}, i)
+    },
+  )
+}
 
 // ── Actions ───────────────────────────────────────────────────────────
 

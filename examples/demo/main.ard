@@ -14,12 +14,20 @@ struct DemoState {
   done: Bool,
   mode: Str,
   dialog_open: Bool,
+  chat: Str,
+  logs: [Str],
 }
 
 fn initial_state() DemoState {
   DemoState{
     page: 0, name: "", notes: "", count: 0, ticks: 0,
     done: false, mode: "compact", dialog_open: false,
+    chat: "",
+    logs: [
+      "Ada: welcome to the echo log",
+      "Linus: submit a message below",
+      "Grace: the viewport follows while you are at the end",
+    ],
   }
 }
 
@@ -325,31 +333,152 @@ fn controls_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme
 
 // ─── Lists page ───────────────────────────────────────────────────────
 
-fn sliver_rows(count: Int) [ui::Widget] {
-  mut rows: [ui::Widget] = []
-  mut i = 1
-  while i <= count {
-    rows.push(ui::text(" " + pad_left(i.to_str(), 4) + "  deploy target " + (100 + i).to_str() + "  ready"))
-    i = i + 1
+fn list_demo_row(theme: ui::Theme, i: Int) ui::Widget {
+  mut status = "ready"
+  mut color = theme.muted_foreground
+  if (i % 9) == 0 {
+    status = "blocked"
+    color = theme.danger_text
+  } else if (i % 5) == 0 {
+    status = "running"
+    color = theme.success_text
+  } else if (i % 4) == 0 {
+    status = "queued"
+    color = theme.warning_text
   }
-  rows
+  ui::rich_text([
+    ui::span(pad_left(i.to_str(), 4), bold()),
+    ui::span("  "),
+    ui::span("deploy target " + (100 + i).to_str()),
+    ui::span("  "),
+    ui::span(status, fg: color),
+  ])
 }
 
-fn lists_page() ui::Widget {
-  let ctrl = ui::scroll_controller()
+fn chat_demo_message(theme: ui::Theme, i: Int, body: Str) ui::Widget {
+  ui::rich_text(
+    [
+      ui::span(pad_left((i + 1).to_str(), 3), fg: theme.muted_foreground),
+      ui::span(" "),
+      ui::span(body),
+    ],
+    soft_wrap: true,
+  )
+}
+
+// list.push() can't be called on a list captured from an enclosing
+// scope, so build the new logs list in a free function (see AGENTS.md).
+fn append_logs(logs: [Str], message: Str) [Str] {
+  mut next = logs
+  next.push("You: " + message)
+  next.push("Echo: " + message)
+  next
+}
+
+fn lists_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
+  let logs = model.logs
   ui::column([
-    ui::styled_text("Lists", -1, -1, bold()),
-    ui::list_tile(ui::text("Deploy queue"), true, false, fn(ctx: ui::EventContext) {}),
-    ui::list_tile(ui::text("Checks passing"), false, false, fn(ctx: ui::EventContext) {}),
-    ui::list_tile(ui::text("Archived target"), false, true, fn(ctx: ui::EventContext) {}),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::text("Sliver list with pinned header:"),
-    ui::sized_box(60, 5, ui::custom_scroll_view(ctrl, [
-      ui::sliver_to_box(ui::text("Intro sliver scrolls away before the pinned header.")),
-      ui::sliver_pinned_header(ui::styled_text(" #  target             status", -1, -1, bold())),
-      ui::sliver_list(sliver_rows(20)),
-      ui::sliver_to_box(ui::styled_text("Footer sliver.", -1, -1, dim())),
+    ui::rich_text(
+      [
+        ui::span("Lists", bold()),
+        ui::span("  mixed slivers, lazy rows, and follow-output logs"),
+      ],
+      soft_wrap: true,
+    ),
+    ui::sized_box(0, 1, ui::text("")),
+    ui::sized_box(72, 5, ui::column([
+      ui::list_tile(
+        title: ui::text("Deploy queue"),
+        leading: ui::text("•"),
+        subtitle: ui::text("2 running, 4 queued"),
+        trailing: ui::text("open"),
+        selected: true,
+        on_pressed: fn(ctx: ui::EventContext) {
+          ui::notify(ctx, "List tile", "Deploy queue")
+        },
+      ),
+      ui::list_tile(
+        title: ui::text("Checks passing"),
+        leading: ui::styled_text("✓", theme.success_text, -1, 0),
+        trailing: ui::text("12/12"),
+        on_pressed: fn(ctx: ui::EventContext) {
+          ui::notify(ctx, "List tile", "Checks passing")
+        },
+      ),
+      ui::list_tile(
+        title: ui::text("Archived target"),
+        leading: ui::text("·"),
+        subtitle: ui::text("disabled row"),
+        disabled: true,
+      ),
     ])),
+    ui::sized_box(0, 1, ui::text("")),
+    ui::sized_box(72, 3, ui::scrollbar(
+      ui::custom_scroll_view(
+        ui::scroll_controller(),
+        [
+          ui::sliver_to_box(ui::text(
+            "The intro sliver scrolls away before the pinned header takes over.",
+            soft_wrap: true,
+          )),
+          ui::sliver_pinned_header(ui::decorated_box(
+            theme.foreground, theme.surface, bold(),
+            ui::text(" #  target             status"),
+          )),
+          ui::sliver_list_builder(
+            count: 2000,
+            item_extent: 1,
+            overscan: 12,
+            builder: fn(ctx: ui::BuildContext, i: Int) ui::Widget {
+              list_demo_row(theme, i + 1)
+            },
+          ),
+          ui::sliver_to_box(ui::rich_text(
+            [
+              ui::span("Footer sliver", bold()),
+              ui::span("\nTrack clicks page the same viewport as Page Up and Page Down. Drag the thumb for proportional scrolling."),
+            ],
+            soft_wrap: true,
+          )),
+        ],
+      ),
+    )),
+    ui::sized_box(0, 1, ui::text("")),
+    ui::text_field(
+      value: model.chat,
+      placeholder: "echo a message",
+      min_width: 72,
+      on_changed: fn(ctx: ui::EventContext, value: Str) {
+        state.set(fn(mut s: DemoState) { s.chat = value })
+      },
+      on_submitted: fn(ctx: ui::EventContext, value: Str) {
+        let trimmed = value.trim()
+        if not (trimmed == "") {
+          state.set(fn(mut s: DemoState) {
+            s.logs = append_logs(s.logs, trimmed)
+            s.chat = ""
+          })
+        }
+      },
+    ),
+    ui::sized_box(0, 1, ui::text("")),
+    ui::styled_text("Variable-height messages", -1, -1, bold()),
+    ui::sized_box(72, 2, ui::scrollbar(
+      ui::custom_scroll_view(
+        ui::scroll_controller(),
+        [
+          ui::sliver_list_builder(
+            count: logs.size(),
+            estimated_item_extent: 2,
+            overscan: 8,
+            builder: fn(ctx: ui::BuildContext, i: Int) ui::Widget {
+              chat_demo_message(theme, i, logs.at(i))
+            },
+          ),
+        ],
+        follow_output: true,
+      ),
+    )),
   ])
 }
 
@@ -481,7 +610,7 @@ fn build_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) u
     0 => home_page(model.ticks),
     1 => text_page(theme),
     2 => controls_page(model, state, theme),
-    3 => lists_page(),
+    3 => lists_page(model, state, theme),
     4 => table_page(),
     5 => theme_page(),
     _ => home_page(model.ticks),

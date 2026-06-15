@@ -395,8 +395,31 @@ func UiModalBarrier(fg, bg, ulColor, ulStyle, attrs int, opacity int) ui.Widget 
 	return ui.ModalBarrier{Color: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs).Background, Opacity: uint8(opacity)}
 }
 
-func UiListTile(title ui.Widget, selected bool, disabled bool, onPressed func(ui.EventContext)) ui.Widget {
-	return ui.ListTile{Title: title, Selected: selected, Disabled: disabled, OnPressed: onPressed}
+// UiListTile uses Bool sentinels for the four nullable slots so vaxis
+// can distinguish "not set" from "set". Mirrors the span / text_field
+// pattern. Avoids pulling ardruntime.Maybe across the FFI.
+func UiListTile(
+	title ui.Widget,
+	selected, disabled bool,
+	hasLeading bool, leading ui.Widget,
+	hasSubtitle bool, subtitle ui.Widget,
+	hasTrailing bool, trailing ui.Widget,
+	hasOnPressed bool, onPressed func(ui.EventContext),
+) ui.Widget {
+	tile := ui.ListTile{Title: title, Selected: selected, Disabled: disabled}
+	if hasLeading {
+		tile.Leading = leading
+	}
+	if hasSubtitle {
+		tile.Subtitle = subtitle
+	}
+	if hasTrailing {
+		tile.Trailing = trailing
+	}
+	if hasOnPressed {
+		tile.OnPressed = onPressed
+	}
+	return tile
 }
 
 func UiProgressBar(value float64, width int, filledFg, filledBg, filledUlColor, filledUlStyle, filledAttrs, emptyFg, emptyBg, emptyUlColor, emptyUlStyle, emptyAttrs int) ui.Widget {
@@ -499,8 +522,8 @@ func UiScrollControllerScrollToEnd(controller *ui.ScrollController) bool {
 	return controller.ScrollToEnd()
 }
 
-func UiCustomScrollView(controller *ui.ScrollController, slivers []ui.Widget) ui.Widget {
-	return ui.CustomScrollView{Controller: controller, Slivers: slivers}
+func UiCustomScrollView(controller *ui.ScrollController, slivers []ui.Widget, followOutput bool) ui.Widget {
+	return ui.CustomScrollView{Controller: controller, Slivers: slivers, FollowOutput: followOutput}
 }
 
 func UiSliverToBox(child ui.Widget) ui.Widget {
@@ -517,6 +540,23 @@ func UiSliverFillRemaining(child ui.Widget) ui.Widget {
 
 func UiSliverList(children []ui.Widget) ui.Widget {
 	return ui.SliverList{Children: children}
+}
+
+// UiSliverListBuilder is the lazy/index-based sliver. ItemExtent and
+// EstimatedItemExtent are mutually exclusive in practice: set one or the
+// other (or neither, for a default). Passing 0 leaves the field at its
+// vaxis zero value.
+func UiSliverListBuilder(
+	count, itemExtent, estimatedItemExtent, overscan int,
+	builder func(ui.BuildContext, int) ui.Widget,
+) ui.Widget {
+	return ui.SliverListBuilder{
+		Count:               count,
+		ItemExtent:          itemExtent,
+		EstimatedItemExtent: estimatedItemExtent,
+		Overscan:            overscan,
+		Builder:             builder,
+	}
 }
 
 // ─── App runner ───────────────────────────────────────────────────────
