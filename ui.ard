@@ -959,8 +959,10 @@ fn scrollbar(child: Widget, axis: ScrollAxis?) Widget {
 
 fn scroll_pane_controller() ScrollPaneController { _scroll_pane_controller() }
 
-fn scroll_pane(controller: ScrollPaneController, child: Widget) Widget {
-  _scroll_pane(controller, child)
+// Pass `controller` only if you need to drive the pane programmatically.
+// Otherwise omit it; a fresh internal controller is created and discarded.
+fn scroll_pane(child: Widget, controller: ScrollPaneController?) Widget {
+  _scroll_pane(controller.or(_scroll_pane_controller()), child)
 }
 
 fn scroll_pane_scroll_by(controller: ScrollPaneController, cols: Int, rows: Int) Bool {

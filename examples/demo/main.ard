@@ -76,32 +76,127 @@ fn home_page(ticks: Int) ui::Widget {
 
 // ─── Text page ────────────────────────────────────────────────────────
 
-fn scroll_lines() ui::Widget {
+fn scroll_demo_lines() ui::Widget {
   mut lines: [ui::Widget] = []
   mut i = 1
   while i <= 24 {
-    lines.push(ui::rich_text([ui::span("row " + i.to_str(), bold()), ui::span("  scrollable content", 0)], false))
+    lines.push(ui::rich_text(
+      [
+        ui::span("row " + i.to_str(), bold()),
+        ui::span("  scrollable content for the demo viewport"),
+      ],
+      soft_wrap: false,
+    ))
     i = i + 1
   }
-  ui::column(lines)
+  ui::column(lines, cross_align: ui::CrossAlign::start)
 }
 
-fn text_page() ui::Widget {
-  ui::scroll_view(ui::column([
-    ui::styled_text("Text layout", -1, -1, bold()),
-    ui::rich_text([
-      ui::span("RichText spans can mix ", 0),
-      ui::span("bold", bold()),
-      ui::span(", ", 0),
-      ui::span("italic", italic()),
-      ui::span(", and normal text.", 0),
-    ], false),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::text("Vertical scroll view:"),
-    ui::sized_box(60, 4, ui::scroll_view(scroll_lines())),
-    ui::sized_box(80, 1, ui::text("")),
-    ui::text("Bottom of text page."),
-  ]))
+fn horizontal_scroll_line() Str {
+  "col-001 alpha  |  col-002 beta  |  col-003 gamma  |  col-004 delta  |  col-005 epsilon  |  col-006 zeta  |  col-007 eta"
+}
+
+fn scroll_pane_demo_text() Str {
+  mut out = ""
+  mut row = 1
+  while row <= 18 {
+    if row > 1 { out = out + "\n" }
+    mut col = 1
+    while col <= 10 {
+      if col > 1 { out = out + "  " }
+      out = out + "r" + pad_left(row.to_str(), 2) + "c" + pad_left(col.to_str(), 2)
+      col = col + 1
+    }
+    row = row + 1
+  }
+  out
+}
+
+fn text_page(theme: ui::Theme) ui::Widget {
+  ui::selection_area(ui::column(
+    [
+      ui::rich_text(
+        [
+          ui::span("Text layout", bold()),
+          ui::span("\nDrag to select, double-click words, triple-click lines, then press Ctrl+C to copy."),
+          ui::span("\nRichText spans can mix "),
+          ui::span("bold", bold()),
+          ui::span(", "),
+          ui::span("italic", italic()),
+          ui::span(", and normal text while sharing the same selection area."),
+        ],
+        soft_wrap: true,
+      ),
+      ui::sized_box(0, 1, ui::text("")),
+      ui::sized_box(72, 5, ui::scrollbar(ui::scroll_view(scroll_demo_lines()))),
+      ui::sized_box(0, 1, ui::text("")),
+      ui::text("Horizontal scroll"),
+      ui::sized_box(48, 2, ui::scrollbar(
+        ui::scroll_view(
+          ui::text(horizontal_scroll_line()),
+          axis: ui::ScrollAxis::horizontal,
+        ),
+        axis: ui::ScrollAxis::horizontal,
+      )),
+      ui::sized_box(0, 1, ui::text("")),
+      ui::text("Scroll pane"),
+      ui::sized_box(48, 6, ui::scrollbar(
+        ui::scrollbar(ui::scroll_pane(ui::text(scroll_pane_demo_text()))),
+        axis: ui::ScrollAxis::horizontal,
+      )),
+      ui::sized_box(0, 1, ui::text("")),
+      ui::constrained_box(
+        ui::text(
+          "This paragraph is constrained to seventy-two cells so resizing the terminal makes the surrounding layout obvious while the paragraph itself wraps inside a predictable measure.",
+          soft_wrap: true,
+        ),
+        max_w: 72,
+      ),
+      ui::rich_text(
+        [
+          ui::span("Multiple selectable widgets: ", bold()),
+          ui::span("drag from this phrase "),
+          ui::span("through the next line", bold()),
+          ui::span(" to test cross-widget copy."),
+        ],
+        soft_wrap: true,
+      ),
+      ui::rich_text(
+        [
+          ui::span("Inline links can carry OSC 8 metadata and mouse callbacks: "),
+          ui::span(
+            "rockorager.dev",
+            fg: theme.primary_hovered,
+            underline: true,
+            hyperlink: "https://rockorager.dev",
+            on_pressed: fn(ctx: ui::EventContext) {
+              ui::notify(ctx, "Link clicked", "rockorager.dev")
+            },
+          ),
+        ],
+        soft_wrap: true,
+      ),
+      ui::text("Second selectable line follows the first in copied text."),
+      ui::selection_container(
+        ui::rich_text([ui::span("This line opts out of SelectionArea.", fg: theme.disabled_foreground)]),
+        disabled: true,
+      ),
+      ui::constrained_box(
+        ui::text(
+          "Ellipsis keeps hidden source text out of mouse selection.",
+          overflow: ui::TextOverflow::ellipsis,
+          max_lines: 1,
+        ),
+        max_w: 48,
+      ),
+      ui::constrained_box(
+        ui::text("center aligned text", align: ui::TextAlign::center),
+        min_w: 72,
+        max_w: 72,
+      ),
+    ],
+    cross_align: ui::CrossAlign::start,
+  ))
 }
 
 // ─── Controls page ────────────────────────────────────────────────────
@@ -321,7 +416,7 @@ fn build_footer(page: Int) ui::Widget {
 fn build_page(model: DemoState, state: ui::State<DemoState>, theme: ui::Theme) ui::Widget {
   match model.page {
     0 => home_page(model.ticks),
-    1 => text_page(),
+    1 => text_page(theme),
     2 => controls_page(model, state),
     3 => lists_page(),
     4 => table_page(),
