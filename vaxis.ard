@@ -611,6 +611,45 @@ impl UnderlineStyle {
   }
 }
 
+fn _find_nth_colon(s: Str, n: Int) Int {
+  mut count = 0
+  mut i = 0
+  while i < s.size() and count < n {
+    match s.at(i) {
+      r => { if r == ':' { count = count + 1 } },
+      _ => {},
+    }
+    if count < n { i = i + 1 }
+  }
+  i
+}
+
+fn _parse_int(s: Str, start: Int, end: Int) Int {
+  mut result = ""
+  mut i = start
+  while i < s.size() and i < end {
+    match s.at(i) {
+      r => { result = result + r.to_str() },
+      _ => {},
+    }
+    i = i + 1
+  }
+  Int::from_str(result).or(0)
+}
+
+fn _substring(s: Str, start: Int, end: Int) Str {
+  mut result = ""
+  mut i = start
+  while i < s.size() and i < end {
+    match s.at(i) {
+      r => { result = result + r.to_str() },
+      _ => {},
+    }
+    i = i + 1
+  }
+  result
+}
+
 fn parse_event(raw: Str) Event {
   mut event: Event = KeyEvent{ key: raw, modifiers: [], event_type: EventType::press }
   if raw == "redraw" { event = RedrawEvent{} }
@@ -622,34 +661,37 @@ fn parse_event(raw: Str) Event {
   if raw == "theme:dark" { event = ColorThemeEvent{ dark: true } }
   if raw == "theme:light" { event = ColorThemeEvent{ dark: false } }
   if raw.starts_with("key:") {
-    let rest = raw.replace("key:", "")
-    let parts = rest.split(":")
-    mut mods: [Modifier] = []
-    mut etype = EventType::press
-    mut name = rest
-    if parts.size() >= 3 {
-      mods = unpack_modifiers(Int::from_str(parts.at(0)).or(0))
-      etype = event_type_from_int(Int::from_str(parts.at(1)).or(0))
-      name = parts.at(2)
-    }
+    // Format: key:<modmask>:<eventtype>:<name>
+    let after = raw.replace("key:", "")
+    let c1 = _find_nth_colon(after, 1)
+    let c2 = _find_nth_colon(after, 2)
+    let mods = unpack_modifiers(_parse_int(after, 0, c1))
+    let etype = event_type_from_int(_parse_int(after, c1 + 1, c2))
+    let name = _substring(after, c2 + 1, after.size())
     event = KeyEvent{ key: name, modifiers: mods, event_type: etype }
   }
   if raw.starts_with("resize:") {
-    let split = raw.split(":")
-    let cols = Int::from_str(split.at(1)).or(80)
-    let rows = Int::from_str(split.at(2)).or(24)
-    let pw = Int::from_str(split.at(3)).or(0)
-    let ph = Int::from_str(split.at(4)).or(0)
+    let after = raw.replace("resize:", "")
+    let c1 = _find_nth_colon(after, 1)
+    let c2 = _find_nth_colon(after, 2)
+    let c3 = _find_nth_colon(after, 3)
+    let cols = _parse_int(after, 0, c1)
+    let rows = _parse_int(after, c1 + 1, c2)
+    let pw = _parse_int(after, c2 + 1, c3)
+    let ph = _parse_int(after, c3 + 1, after.size())
     event = ResizeEvent{ cols: cols, rows: rows, pixel_width: pw, pixel_height: ph }
   }
   if raw.starts_with("mouse:") {
-    let rest = raw.replace("mouse:", "")
-    let parts = rest.split(":")
-    let btn = mouse_button_from_int(Int::from_str(parts.at(0)).or(0))
-    let col = Int::from_str(parts.at(1)).or(0)
-    let row = Int::from_str(parts.at(2)).or(0)
-    let mods = unpack_modifiers(Int::from_str(parts.at(3)).or(0))
-    let etype = event_type_from_int(Int::from_str(parts.at(4)).or(0))
+    let after = raw.replace("mouse:", "")
+    let c1 = _find_nth_colon(after, 1)
+    let c2 = _find_nth_colon(after, 2)
+    let c3 = _find_nth_colon(after, 3)
+    let c4 = _find_nth_colon(after, 4)
+    let btn = mouse_button_from_int(_parse_int(after, 0, c1))
+    let col = _parse_int(after, c1 + 1, c2)
+    let row = _parse_int(after, c2 + 1, c3)
+    let mods = unpack_modifiers(_parse_int(after, c3 + 1, c4))
+    let etype = event_type_from_int(_parse_int(after, c4 + 1, after.size()))
     event = MouseEvent{ button: btn, col: col, row: row, modifiers: mods, event_type: etype }
   }
   event
@@ -1160,12 +1202,13 @@ impl App {
     let raw = try raw_read_key(self.vx)
     mut key = "redraw"
     if raw.starts_with("key:") {
-      let rest = raw.replace("key:", "")
-      let parts = rest.split(":")
-      if parts.size() >= 3 {
-        key = parts.at(2)
+      let after = raw.replace("key:", "")
+      let c1 = _find_nth_colon(after, 1)
+      let c2 = _find_nth_colon(after, 2)
+      if c2 > c1 {
+        key = _substring(after, c2 + 1, after.size())
       } else {
-        key = rest
+        key = after
       }
     }
     if raw == "quit" { key = "q" }
