@@ -800,12 +800,13 @@ extern fn _text_field(
 ) Widget = "UiTextField"
 
 fn text_field(
-  value: Str, on_changed: fn(EventContext, Str),
+  value: Str, on_changed: fn(EventContext, Str)?,
   placeholder: Str?, min_width: Int?, obscure: Bool?, on_submitted: fn(EventContext, Str)?,
 ) Widget {
+  let changed = on_changed.or(fn(_c: EventContext, _s: Str) {})
   let sub = on_submitted.or(fn(_c: EventContext, _s: Str) {})
   _text_field(value, placeholder.or(""), min_width.or(0), obscure.or(false),
-    fn(ctx: EventContextHandle, next: Str) { on_changed(EventContext{handle: ctx}, next) },
+    fn(ctx: EventContextHandle, next: Str) { changed(EventContext{handle: ctx}, next) },
     on_submitted.is_some(),
     fn(ctx: EventContextHandle, s: Str) { sub(EventContext{handle: ctx}, s) })
 }
