@@ -212,8 +212,11 @@ func UiFocusScope(child ui.Widget, trap, autoFocus bool) ui.Widget {
 
 // ─── Divider ──────────────────────────────────────────────────────────
 
-func UiDivider() ui.Widget {
-	return ui.Divider{}
+func UiDivider(axis, fg, bg, attrs int) ui.Widget {
+	return ui.Divider{
+		Axis:  ui.Axis(axis),
+		Style: decodeUiStyle(fg, bg, -1, 0, attrs),
+	}
 }
 
 // ─── Text input ───────────────────────────────────────────────────────

@@ -788,8 +788,22 @@ fn segmented_control(value: Str, segments: [SegmentedItem], on_changed: fn(Event
 
 // ── Divider ───────────────────────────────────────────────────────────
 
-extern fn _divider() Widget = "UiDivider"
-fn divider() Widget { _divider() }
+extern fn _divider(axis: Int, fg: Int, bg: Int, attrs: Int) Widget = "UiDivider"
+
+// Divider paints a one-cell separator. The default axis is horizontal.
+//
+// Because Divider writes cells directly without merging with the underlying
+// surface style, an unset background paints the terminal default colour. If
+// the divider sits inside a themed surface, pass `bg` so the divider blends
+// in (commonly `theme.background` or `theme.surface`).
+fn divider(axis: Axis?, fg: vaxis::Color?, bg: vaxis::Color?, attrs: TextAttrs?) Widget {
+  _divider(
+    axis.or(Axis::horizontal).to_int(),
+    vaxis::color_to_int(fg.or(vaxis::COLOR_DEFAULT)),
+    vaxis::color_to_int(bg.or(vaxis::COLOR_DEFAULT)),
+    attrs.or(TextAttrs{}).to_int(),
+  )
+}
 
 // ── Text input ────────────────────────────────────────────────────────
 
