@@ -43,16 +43,22 @@ Application helpers                Capability queries
 ## Files
 
 ```
-vaxis.ard          # Main library: base types + extern declarations (→ ffi/host.go)
+vaxis.ard          # Base library: types + extern declarations (→ ffi/host.go)
 ui.ard             # vaxis/ui bindings: Widget constructors, State<T>, actions, focus
 ffi/
   host.go          # Base vaxis Go FFI companion (package ffi)
   ui.go            # vaxis/ui Go wrappers (package ffi)
 uitest.ard         # (planned) vaxis/ui/uitest bindings — separate module
 examples/
-  counter/         # Counter TUI example (imperative, uses vaxis base API)
-  tic-tac-toe/     # Tic-tac-toe TUI example (imperative)
-  todo/            # Todo list TUI example (declarative, uses vaxis/ui widgets)
+  counter.ard      # Counter TUI (imperative, uses vaxis base API)
+  tic_tac_toe.ard  # Tic-tac-toe TUI (imperative)
+  todo.ard         # Todo list TUI (declarative, uses vaxis/ui widgets)
+  demo.ard         # Full vaxis/ui widget showcase
+  test_harness.py  # Shared PTY test infrastructure
+  test_counter.py  # Counter smoke test
+  test_tic_tac_toe.py
+  test_todo.py
+  test_demo.py
 ```
 
 ## Module imports
@@ -82,16 +88,16 @@ All public vaxis/ui widgets and types are bound. See `ui.ard` and `ffi/ui.go`.
 | Polish | `dialog`, `modal_barrier`, `list_tile`, `overlay`, `overlay_modal`, `command_palette`, `cmd_item` |
 | Selection | `selection_area`, `selection_container` |
 | Table | `table`, `table_row`, `table_column_intrinsic`/`_fixed`/`_flex` |
-| Cursor | `cursor` (with shape constants) |
+| Cursor | `cursor` (with `CursorShape` enum) |
 | Animation | `animation_controller`, `anim_forward`/`_reset`/`_stop`, `anim_value` |
-| Theme | `run_themed` (via `WithBaseColors`) |
+| Theme | `theme_default`, `must_have_theme`, `provider_theme`, `run(root, theme_set?)` |
 | Lifecycle | `run`, `quit` |
 
-### Layout constants
+### Layout enums (typed)
 
-- Flex: `AXIS_HORIZONTAL`/`_VERTICAL`, `MAIN_SIZE_MAX`/`_MIN`, `MAIN_ALIGN_START`/`_END`/`_CENTER`/`_BETWEEN`/`_AROUND`/`_EVENLY`, `CROSS_ALIGN_CENTER`/`_START`/`_END`/`_STRETCH`
-- Scroll: `SCROLL_VERTICAL`, `SCROLL_HORIZONTAL`
-- Cursor: `CURSOR_DEFAULT`, `CURSOR_BLOCK`/`_BLINKING`, `CURSOR_UNDERLINE`/`_BLINKING`, `CURSOR_BEAM`/`_BLINKING`
+- Flex: `Axis::horizontal`/`vertical`, `MainSize::max`/`min`, `MainAlign::start`/`end`/`center`/`between`/`around`/`evenly`, `CrossAlign::center`/`start`/`end`/`stretch`
+- Scroll: `ScrollAxis::vertical`/`horizontal`
+- Cursor: `CursorShape::default`/`block_blinking`/`block`/`underline_blinking`/`underline`/`beam_blinking`/`beam`
 
 ### Stateful widget pattern
 
@@ -119,17 +125,20 @@ ui::action("my-intent", fn(ctx: ui::EventContext, intent: Str) ui::EventResult {
 ## Testing
 
 Python PTY smoke tests exercise built example binaries behind a pseudoterminal.
-Each example has a `test_<name>.py` that builds the binary, spawns it with `pty.fork()`,
-feeds keystrokes, and asserts on visible screen text.
+Shared infrastructure lives in `examples/test_harness.py`.
 
 ```bash
-python3 examples/todo/test_todo.py    # builds + runs todo smoke test
-python3 examples/counter/test_counter.py
-python3 examples/tic-tac-toe/test_tic_tac_toe.py
+python3 examples/test_counter.py    # builds + runs counter smoke test
+python3 examples/test_tic_tac_toe.py
+python3 examples/test_todo.py
+python3 examples/test_demo.py
 ```
 
 Run the relevant smoke test after each round of binding changes to validate
-nothing regressed.
+nothing regressed. The Screen emulator in the harness handles sequential
+(imperative) rendering fully; widget-based (vaxis/ui) apps are smoke-tested
+for startup, navigation, and clean exit since the emulator doesn't track
+vaxis/ui's diff-based cursor positioning.
 
 ## API design principles
 
