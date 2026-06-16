@@ -49,6 +49,9 @@ ffi/
   host.go          # Base vaxis Go FFI companion (package ffi)
   ui.go            # vaxis/ui Go wrappers (package ffi)
 uitest.ard         # (planned) vaxis/ui/uitest bindings — separate module
+docs/              # In-depth notes on non-obvious runtime behaviour
+  README.md        #   Index
+  events-and-focus.md  # Event dispatch, Shortcuts/Actions, focus pitfalls
 examples/
   counter.ard      # Counter TUI (imperative, uses vaxis base API)
   tic_tac_toe.ard  # Tic-tac-toe TUI (imperative)
@@ -310,6 +313,23 @@ spec. Anything subtle should be confirmed with `ard-expert`.
 - Go: `git.sr.ht/~rockorager/vaxis` v0.16.0
 - Ard: `>= 0.19.2`
 - Go target requires Go ≥1.26
+
+## In-depth docs
+
+The `docs/` directory captures behaviour and pitfalls that aren't
+obvious from the bindings or the upstream surface. Consult it (and add
+to it) whenever you debug something subtle that future-you would have
+appreciated being told up front.
+
+- [docs/events-and-focus.md](./docs/events-and-focus.md) — event
+  dispatch model (capture/target/bubble), how `Shortcuts` and
+  `Actions` cooperate via `ctx.Invoke`, the focus registry and
+  `focus_scope` semantics, and the most common gotcha: **why inner
+  `Shortcuts` cannot rebind `Tab` / `Shift+Tab` / `Escape`** (and the
+  intent-hijack workaround).
+
+When you discover another non-obvious interaction, add a focused doc
+in `docs/` and link it from `docs/README.md` and from this section.
 
 ## Reference
 
