@@ -310,7 +310,8 @@ spec. Anything subtle should be confirmed with `ard-expert`.
 
 ## Dependencies
 
-- Go: `git.sr.ht/~rockorager/vaxis` v0.16.0
+- Go: `go.rockorager.dev/vaxis` (post-v0.16.0 tip; pinned via go.mod
+  `replace` to a local checkout when consuming unreleased features)
 - Ard: `>= 0.19.2`
 - Go target requires Go ≥1.26
 
@@ -333,6 +334,7 @@ in `docs/` and link it from `docs/README.md` and from this section.
 
 ## Reference
 
-- vaxis Go source: `git.sr.ht/~rockorager/vaxis`
+- vaxis Go source: `go.rockorager.dev/vaxis`
+  (formerly `git.sr.ht/~rockorager/vaxis` — module path was renamed)
 - Ard docs: https://ard.run
 - This package on GitHub: `github.com/akonwi/vaxis-ard`

@@ -184,6 +184,6 @@ Infrastructure is shared in `test_harness.py`. Run tests after binding changes t
 
 ## Dependencies
 
-- Go: `git.sr.ht/~rockorager/vaxis` v0.16.0
+- Go: `go.rockorager.dev/vaxis` (post-v0.16.0 tip)
 - Ard: `>= 0.19.2`
 - Go target requires Go ≥1.26

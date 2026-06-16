@@ -3,8 +3,8 @@ package ffi
 import (
 	"time"
 
-	"git.sr.ht/~rockorager/vaxis"
-	"git.sr.ht/~rockorager/vaxis/ui"
+	"go.rockorager.dev/vaxis"
+	"go.rockorager.dev/vaxis/ui"
 )
 
 // ─── State / context plumbing ─────────────────────────────────────────
@@ -70,18 +70,37 @@ func UiSizedBox(width, height int, child ui.Widget) ui.Widget {
 
 // ─── Basic widgets ────────────────────────────────────────────────────
 
-func UiText(value string, softWrap bool, align, overflow, maxLines int) ui.Widget {
-	return ui.Text{
-		Value:    value,
-		SoftWrap: softWrap,
-		Align:    ui.TextAlign(align),
-		Overflow: ui.TextOverflow(overflow),
-		MaxLines: maxLines,
+func UiText(
+	value string, softWrap bool, align, overflow, maxLines int,
+	hasOnPressed bool, onPressed func(ui.EventContext), clickAffordance int,
+) ui.Widget {
+	t := ui.Text{
+		Value:           value,
+		SoftWrap:        softWrap,
+		Align:           ui.TextAlign(align),
+		Overflow:        ui.TextOverflow(overflow),
+		MaxLines:        maxLines,
+		ClickAffordance: ui.ClickAffordance(clickAffordance),
 	}
+	if hasOnPressed {
+		t.OnPressed = onPressed
+	}
+	return t
 }
 
-func UiStyledText(value string, fg, bg, ulColor, ulStyle, attrs int) ui.Widget {
-	return ui.Text{Value: value, Style: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs)}
+func UiStyledText(
+	value string, fg, bg, ulColor, ulStyle, attrs int,
+	hasOnPressed bool, onPressed func(ui.EventContext), clickAffordance int,
+) ui.Widget {
+	t := ui.Text{
+		Value:           value,
+		Style:           decodeUiStyle(fg, bg, ulColor, ulStyle, attrs),
+		ClickAffordance: ui.ClickAffordance(clickAffordance),
+	}
+	if hasOnPressed {
+		t.OnPressed = onPressed
+	}
+	return t
 }
 
 func UiButton(label string, onPressed func(ui.EventContext)) ui.Widget {
