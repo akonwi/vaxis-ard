@@ -927,18 +927,35 @@ impl ScrollAxis {
   }
 }
 
-extern fn _scroll_view(child: Widget, axis: Int) Widget = "UiScrollView"
-extern fn _scrollbar(child: Widget, axis: Int) Widget = "UiScrollbar"
-
+extern type ScrollController = "*ui.ScrollController"
 extern type ScrollPaneController = "*ui.ScrollPaneController"
+
+extern fn _scroll_controller() ScrollController = "UiScrollController"
+extern fn _scroll_view(
+  child: Widget, axis: Int, has_controller: Bool, controller: ScrollController,
+) Widget = "UiScrollView"
+extern fn _scrollbar(child: Widget, axis: Int) Widget = "UiScrollbar"
 
 extern fn _scroll_pane_controller() ScrollPaneController = "UiScrollPaneController"
 extern fn _scroll_pane(controller: ScrollPaneController, child: Widget) Widget = "UiScrollPane"
 extern fn _scroll_pane_scroll_by(controller: ScrollPaneController, cols: Int, rows: Int) Bool = "UiScrollPaneScrollBy"
 extern fn _scroll_pane_scroll_to(controller: ScrollPaneController, col: Int, row: Int) Bool = "UiScrollPaneScrollTo"
 
-fn scroll_view(child: Widget, axis: ScrollAxis?) Widget {
-  _scroll_view(child, axis.or(ScrollAxis::vertical).to_int())
+// scroll_view lays its child out with bounded cross-axis constraints
+// and unbounded main-axis (the scrolling axis). That keeps soft-wrap
+// and other width-dependent layout working on the child, unlike
+// scroll_pane which unbounds both axes.
+//
+// Pass a `controller` to drive programmatic scrolling (line scroll,
+// scroll to offset, scroll to start/end). Without one a fresh internal
+// controller is created on every build, so the scroll position would
+// snap back to the top whenever state changes.
+fn scroll_view(
+  child: Widget, axis: ScrollAxis?, controller: ScrollController?,
+) Widget {
+  let has_controller = controller.is_some()
+  let c = controller.or(_scroll_controller())
+  _scroll_view(child, axis.or(ScrollAxis::vertical).to_int(), has_controller, c)
 }
 
 fn scrollbar(child: Widget, axis: ScrollAxis?) Widget {
@@ -958,13 +975,24 @@ fn scroll_pane_scroll_to(controller: ScrollPaneController, col: Int, row: Int) B
 
 // ── CustomScrollView / Slivers ────────────────────────────────────────
 
-extern type ScrollController = "*ui.ScrollController"
-
-extern fn _scroll_controller() ScrollController = "UiScrollController"
 extern fn _scroll_controller_scroll_by_lines(c: ScrollController, lines: Int) Bool = "UiScrollControllerScrollByLines"
 extern fn _scroll_controller_scroll_to_offset(c: ScrollController, row: Int) Bool = "UiScrollControllerScrollToOffset"
 extern fn _scroll_controller_scroll_to_start(c: ScrollController) Bool = "UiScrollControllerScrollToStart"
 extern fn _scroll_controller_scroll_to_end(c: ScrollController) Bool = "UiScrollControllerScrollToEnd"
+
+fn scroll_controller() ScrollController { _scroll_controller() }
+fn scroll_controller_scroll_by_lines(c: ScrollController, lines: Int) Bool {
+  _scroll_controller_scroll_by_lines(c, lines)
+}
+fn scroll_controller_scroll_to_offset(c: ScrollController, row: Int) Bool {
+  _scroll_controller_scroll_to_offset(c, row)
+}
+fn scroll_controller_scroll_to_start(c: ScrollController) Bool {
+  _scroll_controller_scroll_to_start(c)
+}
+fn scroll_controller_scroll_to_end(c: ScrollController) Bool {
+  _scroll_controller_scroll_to_end(c)
+}
 
 extern fn _custom_scroll_view(controller: ScrollController, slivers: [Widget], follow_output: Bool) Widget = "UiCustomScrollView"
 extern fn _sliver_to_box(child: Widget) Widget = "UiSliverToBox"

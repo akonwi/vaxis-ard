@@ -581,8 +581,12 @@ func UiMakeSpan(
 
 // ─── Scroll ───────────────────────────────────────────────────────────
 
-func UiScrollView(child ui.Widget, axis int) ui.Widget {
-	return ui.ScrollView{Axis: ui.ScrollAxis(axis), Child: child}
+func UiScrollView(child ui.Widget, axis int, hasController bool, controller *ui.ScrollController) ui.Widget {
+	sv := ui.ScrollView{Axis: ui.ScrollAxis(axis), Child: child}
+	if hasController {
+		sv.Controller = controller
+	}
+	return sv
 }
 
 func UiScrollbar(child ui.Widget, axis int) ui.Widget {
