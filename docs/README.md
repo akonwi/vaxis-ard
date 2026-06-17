@@ -12,6 +12,12 @@ something doesn't work.
   `ctx.Invoke`, focus widgets, app-level default shortcuts, and the
   common pitfalls (e.g. why you can't rebind `Tab` from an inner
   `Shortcuts`).
+- [widget-reconciliation.md](./widget-reconciliation.md) — how the
+  rebuild pump diffs widget trees, the **type-change pitfall** where
+  a stateful's build output silently fails to repaint when its outer
+  widget type changes between frames, and the workarounds we use
+  while the upstream behaviour is being investigated. Reproducer at
+  `examples/reconcile_bug.ard`.
 
 ## Conventions
 

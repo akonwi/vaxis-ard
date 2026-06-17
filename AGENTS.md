@@ -328,6 +328,12 @@ appreciated being told up front.
   `focus_scope` semantics, and the most common gotcha: **why inner
   `Shortcuts` cannot rebind `Tab` / `Shift+Tab` / `Escape`** (and the
   intent-hijack workaround).
+- [docs/widget-reconciliation.md](./docs/widget-reconciliation.md) —
+  rebuild pump and `UpdateChild` reconciliation, plus the
+  **type-change pitfall**: when a stateful's build output flips its
+  outer widget type between frames, the new tree isn't painted.
+  Includes the workarounds in active use and a focused reproducer
+  (`examples/reconcile_bug.ard`).
 
 When you discover another non-obvious interaction, add a focused doc
 in `docs/` and link it from `docs/README.md` and from this section.

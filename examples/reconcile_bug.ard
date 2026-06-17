@@ -1,0 +1,91 @@
+use vaxis/ui
+
+// Minimal reproducer for a reconciliation bug.
+//
+// When a stateful widget's build() returns a different widget TYPE between
+// frames, the painted output stays at the first-frame tree. Returning the
+// same type with different content (or with different children) is fine.
+//
+// Expected:
+//   - start shows "FIRST" centered (Center widget)
+//   - press Space → screen shows "SECOND inside column" (Column widget)
+//
+// Observed (reproduces the bug):
+//   - "FIRST" stays on screen even after Space is pressed
+//
+// Run: ard build --out reconcile_bug examples/reconcile_bug.ard && ./reconcile_bug
+// Quit: q or Ctrl+c
+
+struct ToggleState { toggled: Bool }
+
+struct OuterState { dummy: Int }
+struct MiddleState { dummy: Int }
+
+fn render_body(toggled: Bool) ui::Widget {
+  if toggled {
+    ui::column([ui::text("SECOND (column branch)")])
+  } else {
+    ui::center(ui::text("FIRST (center branch)"))
+  }
+}
+
+fn inner() ui::Widget {
+  ui::stateful(
+    key: "repro-inner",
+    init: fn(_ctx: ui::BuildContext) ToggleState {
+      ToggleState{ toggled: false }
+    },
+    build: fn(_ctx: ui::BuildContext, state: ui::State<ToggleState>) ui::Widget {
+      let model = state.value()
+      let body = render_body(model.toggled)
+      ui::shortcuts(
+        ui::actions(
+          ui::focus_scope(
+            ui::focus(body),
+            trap: false,
+            auto_focus: true,
+          ),
+          [
+            ui::action("toggle", fn(_ctx: ui::EventContext, _i: Str) ui::EventResult {
+              state.set(fn(mut s: ToggleState) { s.toggled = not s.toggled })
+              ui::EventResult::handled
+            }),
+            ui::action("repro.quit", fn(ctx: ui::EventContext, _i: Str) ui::EventResult {
+              ui::quit(ctx)
+              ui::EventResult::handled
+            }),
+          ],
+        ),
+        [
+          "Space": "toggle",
+          "q": "repro.quit",
+          "Ctrl+c": "repro.quit",
+        ],
+      )
+    },
+  )
+}
+
+fn middle() ui::Widget {
+  ui::stateful(
+    key: "repro-middle",
+    init: fn(_ctx: ui::BuildContext) MiddleState { MiddleState{dummy: 0} },
+    build: fn(_ctx: ui::BuildContext, _state: ui::State<MiddleState>) ui::Widget {
+      ui::focus(ui::column([ui::expanded(inner())]))
+    },
+  )
+}
+
+fn outer() ui::Widget {
+  ui::stateful(
+    key: "repro-outer",
+    init: fn(_ctx: ui::BuildContext) OuterState { OuterState{dummy: 0} },
+    build: fn(_ctx: ui::BuildContext, _state: ui::State<OuterState>) ui::Widget {
+      ui::focus(ui::column([ui::expanded(middle())]))
+    },
+  )
+}
+
+fn main() Void {
+  ui::run(outer(), ui::default_theme_set())
+}
