@@ -958,6 +958,7 @@ extern fn _scroll_pane_controller() ScrollPaneController = "UiScrollPaneControll
 extern fn _scroll_pane(controller: ScrollPaneController, child: Widget) Widget = "UiScrollPane"
 extern fn _scroll_pane_scroll_by(controller: ScrollPaneController, cols: Int, rows: Int) Bool = "UiScrollPaneScrollBy"
 extern fn _scroll_pane_scroll_to(controller: ScrollPaneController, col: Int, row: Int) Bool = "UiScrollPaneScrollTo"
+extern fn _scroll_pane_metrics(controller: ScrollPaneController, axis: Int) [Int] = "UiScrollPaneMetrics"
 
 // scroll_view lays its child out with bounded cross-axis constraints
 // and unbounded main-axis (the scrolling axis). That keeps soft-wrap
@@ -989,6 +990,37 @@ fn scroll_pane_scroll_by(controller: ScrollPaneController, cols: Int, rows: Int)
 }
 fn scroll_pane_scroll_to(controller: ScrollPaneController, col: Int, row: Int) Bool {
   _scroll_pane_scroll_to(controller, col, row)
+}
+
+// Reports the current layout state of a mounted scroll pane on the
+// chosen axis. Returns a zero-valued ScrollMetrics if the controller
+// hasn't been attached to a mounted pane yet (e.g. before the first
+// layout pass).
+//
+// Build-time use case: after the first frame, callers can read this to
+// know whether content has been scrolled off either edge — useful for
+// overflow chevrons, scrollbar visibility, etc.
+struct ScrollMetrics {
+  scroll_offset: Int,
+  max_scroll_offset: Int,
+  viewport_width: Int,
+  viewport_height: Int,
+  content_width: Int,
+  content_height: Int,
+}
+
+fn scroll_pane_metrics(
+  controller: ScrollPaneController, axis: ScrollAxis?,
+) ScrollMetrics {
+  let arr = _scroll_pane_metrics(controller, axis.or(ScrollAxis::vertical).to_int())
+  ScrollMetrics{
+    scroll_offset: arr.at(0),
+    max_scroll_offset: arr.at(1),
+    viewport_width: arr.at(2),
+    viewport_height: arr.at(3),
+    content_width: arr.at(4),
+    content_height: arr.at(5),
+  }
 }
 
 // ── CustomScrollView / Slivers ────────────────────────────────────────

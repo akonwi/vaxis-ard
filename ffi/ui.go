@@ -618,6 +618,24 @@ func UiScrollPaneScrollTo(controller *ui.ScrollPaneController, col, row int) boo
 	return controller.ScrollTo(col, row)
 }
 
+// UiScrollPaneMetrics flattens a ScrollMetrics into a fixed-shape int
+// slice the Ard side decodes into a struct. Order:
+//   [scroll_offset, max_scroll_offset,
+//    viewport_width, viewport_height,
+//    content_width, content_height]
+//
+// Returns zero values when the controller has not been attached to a
+// mounted pane (e.g. queried before the first layout). Upstream
+// ScrollPaneController.Metrics handles the not-attached case safely.
+func UiScrollPaneMetrics(controller *ui.ScrollPaneController, axis int) []int {
+	m := controller.Metrics(ui.ScrollAxis(axis))
+	return []int{
+		m.ScrollOffset, m.MaxScrollOffset,
+		m.ViewportWidth, m.ViewportHeight,
+		m.ContentWidth, m.ContentHeight,
+	}
+}
+
 func UiScrollController() *ui.ScrollController {
 	return &ui.ScrollController{}
 }
