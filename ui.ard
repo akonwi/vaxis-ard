@@ -481,10 +481,23 @@ fn constrained_box(child: Widget, min_w: Int?, max_w: Int?, min_h: Int?, max_h: 
 // ── Stack ─────────────────────────────────────────────────────────────
 
 extern fn _stack(children: [Widget], x: Int, y: Int) Widget = "UiStack"
+extern fn _indexed_stack(index: Int, children: [Widget], x: Int, y: Int) Widget = "UiIndexedStack"
 
 fn stack(children: [Widget], alignment: Alignment?) Widget {
   let a = alignment.or(Alignment::center)
   _stack(children, a.to_x(), a.to_y())
+}
+
+// IndexedStack keeps every child mounted but only paints/hit-tests
+// `children[index]`. Useful for tab containers where each tab body has
+// state (cursor position, fetched data, scroll offset) that should
+// survive switching between tabs.
+//
+// The stack sizes to the maximum child size; all children are laid out
+// with the same loose constraints, then only the visible one paints.
+fn indexed_stack(index: Int, children: [Widget], alignment: Alignment?) Widget {
+  let a = alignment.or(Alignment::center)
+  _indexed_stack(index, children, a.to_x(), a.to_y())
 }
 
 // ── Dialog ────────────────────────────────────────────────────────────

@@ -304,6 +304,10 @@ func UiStack(children []ui.Widget, x, y int) ui.Widget {
 	return ui.Stack{Children: children, Alignment: ui.Alignment{X: x, Y: y}}
 }
 
+func UiIndexedStack(index int, children []ui.Widget, x, y int) ui.Widget {
+	return ui.IndexedStack{Index: index, Children: children, Alignment: ui.Alignment{X: x, Y: y}}
+}
+
 func UiDialog(title string, child ui.Widget, actions []ui.Widget, width int, onDismiss func(ui.EventContext)) ui.Widget {
 	return ui.Dialog{Title: title, Child: child, Actions: actions, Width: width, OnDismiss: onDismiss}
 }
