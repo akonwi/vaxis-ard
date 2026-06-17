@@ -234,13 +234,35 @@ fn run(root: Widget, theme_set: ThemeSet?) {
 // ── Layout widgets ────────────────────────────────────────────────────
 
 extern fn _center(child: Widget) Widget = "UiCenter"
-extern fn _padding(all: Int, child: Widget) Widget = "UiPadding"
+extern fn _padding(top: Int, right: Int, bottom: Int, left: Int, child: Widget) Widget = "UiPadding"
 extern fn _expanded(child: Widget) Widget = "UiExpanded"
 extern fn _flexible(flex: Int, child: Widget) Widget = "UiFlexible"
 extern fn _sized_box(width: Int, height: Int, child: Widget) Widget = "UiSizedBox"
 
 fn center(child: Widget) Widget { _center(child) }
-fn padding(all: Int, child: Widget) Widget { _padding(all, child) }
+// Wraps `child` with padding cells on each side.
+//
+// Precedence (most specific wins):
+//   per-side (top/right/bottom/left)
+//   axis (horizontal/vertical)
+//   uniform (all)
+//   0
+//
+// Examples:
+//   ui::padding(child, all: 1)                       // 1 on every side
+//   ui::padding(child, horizontal: 2)                // 2 left/right only
+//   ui::padding(child, vertical: 1, horizontal: 2)   // 1 top/bottom, 2 sides
+//   ui::padding(child, all: 1, top: 0)               // 1 right/bottom/left, 0 top
+fn padding(
+  child: Widget,
+  all: Int?, horizontal: Int?, vertical: Int?,
+  top: Int?, right: Int?, bottom: Int?, left: Int?,
+) Widget {
+  let a = all.or(0)
+  let h = horizontal.or(a)
+  let v = vertical.or(a)
+  _padding(top.or(v), right.or(h), bottom.or(v), left.or(h), child)
+}
 fn expanded(child: Widget) Widget { _expanded(child) }
 fn flexible(flex: Int, child: Widget) Widget { _flexible(flex, child) }
 fn sized_box(width: Int, height: Int, child: Widget) Widget { _sized_box(width, height, child) }
@@ -341,6 +363,7 @@ fn _border_left(b: Borders?) Bool { b.or(Borders{}).left.or(false) }
 extern fn _decorated_box(
   fg: Int, bg: Int, ul_color: Int, ul_style: Int, attrs: Int,
   border_top: Bool, border_right: Bool, border_bottom: Bool, border_left: Bool,
+  border_fg: Int, border_bg: Int, border_attrs: Int,
   child: Widget,
 ) Widget = "UiDecoratedBox"
 
@@ -376,18 +399,32 @@ impl TextAttrs {
   }
 }
 
+// Wraps `child` with a fill style and optional border.
+//
+// Fill style is `fg` / `bg` / `attrs`. Border style defaults to the same
+// values; pass `border_fg` / `border_bg` / `border_attrs` to override.
+// Border lines paint via DrawCell (no style merge with the underlying
+// surface), so an unset `border_bg` paints the terminal default — if
+// the box sits inside a themed surface, pass `border_bg` (commonly
+// `theme.background` or `theme.surface`) so the border blends in.
 fn decorated_box(
   child: Widget,
   fg: vaxis::Color?,
   bg: vaxis::Color?,
   attrs: TextAttrs?,
   border: Borders?,
+  border_fg: vaxis::Color?,
+  border_bg: vaxis::Color?,
+  border_attrs: TextAttrs?,
 ) Widget {
   _decorated_box(
     vaxis::color_to_int(fg.or(vaxis::COLOR_DEFAULT)),
     vaxis::color_to_int(bg.or(vaxis::COLOR_DEFAULT)),
     -1, 0, attrs.or(TextAttrs{}).to_int(),
     _border_top(border), _border_right(border), _border_bottom(border), _border_left(border),
+    vaxis::color_to_int(border_fg.or(fg.or(vaxis::COLOR_DEFAULT))),
+    vaxis::color_to_int(border_bg.or(bg.or(vaxis::COLOR_DEFAULT))),
+    border_attrs.or(attrs.or(TextAttrs{})).to_int(),
     child,
   )
 }

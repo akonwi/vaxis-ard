@@ -939,13 +939,16 @@ fn root_widget() ui::Widget {
     build: fn(ctx: ui::BuildContext, state: ui::State<DemoState>) ui::Widget {
       let model = state.value()
       let theme = ui::must_have_theme(ctx)
-      let inner = ui::padding(1, ui::column([
-        build_header(model.page, model, state, theme),
-        ui::sized_box(80, 1, ui::text("")),
-        ui::padding(1, build_page(model, state, theme)),
-        ui::sized_box(80, 1, ui::text("")),
-        build_footer(model.page),
-      ]))
+      let inner = ui::padding(
+        ui::column([
+          build_header(model.page, model, state, theme),
+          ui::sized_box(80, 1, ui::text("")),
+          ui::padding(build_page(model, state, theme), all: 1),
+          ui::sized_box(80, 1, ui::text("")),
+          build_footer(model.page),
+        ]),
+        all: 1,
+      )
       let content = ui::decorated_box(inner, fg: theme.foreground, bg: theme.background)
 
       let body = ui::shortcuts(

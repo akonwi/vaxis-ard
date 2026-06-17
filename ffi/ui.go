@@ -52,8 +52,8 @@ func UiCenter(child ui.Widget) ui.Widget {
 	return ui.Center(child)
 }
 
-func UiPadding(all int, child ui.Widget) ui.Widget {
-	return ui.Padding(ui.All(all), child)
+func UiPadding(top, right, bottom, left int, child ui.Widget) ui.Widget {
+	return ui.Padding(ui.Insets{Top: top, Right: right, Bottom: bottom, Left: left}, child)
 }
 
 func UiExpanded(child ui.Widget) ui.Widget {
@@ -274,11 +274,19 @@ func UiTextArea(value, placeholder string, minWidth, minHeight int, softWrap boo
 
 // ─── DecoratedBox ─────────────────────────────────────────────────────
 
-func UiDecoratedBox(fg, bg, ulColor, ulStyle, attrs int, borderTop, borderRight, borderBottom, borderLeft bool, child ui.Widget) ui.Widget {
+func UiDecoratedBox(
+	fg, bg, ulColor, ulStyle, attrs int,
+	borderTop, borderRight, borderBottom, borderLeft bool,
+	borderFg, borderBg, borderAttrs int,
+	child ui.Widget,
+) ui.Widget {
 	return ui.DecoratedBox(
 		ui.Decoration{
-			Style:  decodeUiStyle(fg, bg, ulColor, ulStyle, attrs),
-			Border: ui.Border{Top: borderTop, Right: borderRight, Bottom: borderBottom, Left: borderLeft, Style: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs)},
+			Style: decodeUiStyle(fg, bg, ulColor, ulStyle, attrs),
+			Border: ui.Border{
+				Top: borderTop, Right: borderRight, Bottom: borderBottom, Left: borderLeft,
+				Style: decodeUiStyle(borderFg, borderBg, -1, 0, borderAttrs),
+			},
 		},
 		child,
 	)

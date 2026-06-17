@@ -62,24 +62,24 @@ fn todo_row(todo: Todo, index: Int, selected: Int) ui::Widget {
 
 fn build_list(model: TodoUiState) [ui::Widget] {
   mut children: [ui::Widget] = []
-  children.push(ui::padding(1, ui::text("Vaxis/ui Todo")))
+  children.push(ui::padding(ui::text("Vaxis/ui Todo"), all: 1))
   children.push(ui::divider())
 
   if model.todos.size() == 0 {
-    children.push(ui::padding(1, ui::text("  No todos. Press a to add one.")))
+    children.push(ui::padding(ui::text("  No todos. Press a to add one."), all: 1))
   }
 
   mut i = 0
   while i < model.todos.size() {
     let todo = model.todos.at(i)
-    children.push(ui::padding(1, todo_row(todo, i, model.selected)))
+    children.push(ui::padding(todo_row(todo, i, model.selected), all: 1))
     i = i + 1
   }
 
   let done = done_count(model.todos)
   children.push(ui::divider())
-  children.push(ui::padding(1, ui::text("Done: " + done.to_str() + " / " + model.todos.size().to_str())))
-  children.push(ui::padding(1, ui::text("j/k:move  space:toggle  e:edit  a:add  d:delete  q:quit")))
+  children.push(ui::padding(ui::text("Done: " + done.to_str() + " / " + model.todos.size().to_str()), all: 1))
+  children.push(ui::padding(ui::text("j/k:move  space:toggle  e:edit  a:add  d:delete  q:quit"), all: 1))
 
   children
 }
@@ -87,16 +87,19 @@ fn build_list(model: TodoUiState) [ui::Widget] {
 fn editing_view(draft: Str, placeholder: Str, on_changed: fn(ui::EventContext, Str), on_submitted: fn(ui::EventContext, Str)) ui::Widget {
   ui::focus_scope(
     child: ui::column([
-      ui::padding(1, ui::text("Editing todo:")),
-      ui::padding(1, ui::text_field(
-        value: draft,
-        placeholder: placeholder,
-        min_width: 40,
-        obscure: false,
-        on_changed: on_changed,
-        on_submitted: on_submitted,
-      )),
-      ui::padding(1, ui::text("Enter: save  Esc: cancel")),
+      ui::padding(ui::text("Editing todo:"), all: 1),
+      ui::padding(
+        ui::text_field(
+          value: draft,
+          placeholder: placeholder,
+          min_width: 40,
+          obscure: false,
+          on_changed: on_changed,
+          on_submitted: on_submitted,
+        ),
+        all: 1,
+      ),
+      ui::padding(ui::text("Enter: save  Esc: cancel"), all: 1),
     ]),
     trap: false,
     auto_focus: true,
