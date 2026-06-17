@@ -712,52 +712,9 @@ fn progress_bar(
 
 // ── RichText ──────────────────────────────────────────────────────────
 
-extern type TextSpan = "ffi.UiTextSpan"
-
-extern fn _rich_text(spans: [TextSpan], soft_wrap: Bool) Widget = "UiRichText"
-extern fn _span(
-  text: Str, attrs: Int, fg: Int, bg: Int, ul_style: Int,
-  hyperlink: Str, has_on_pressed: Bool, on_pressed: fn(EventContextHandle),
-) TextSpan = "UiMakeSpan"
-
-fn span(
-  text: Str, attrs: TextAttrs?, fg: vaxis::Color?, bg: vaxis::Color?,
-  underline: Bool?, hyperlink: Str?, on_pressed: fn(EventContext)?,
-) TextSpan {
-  let cb = on_pressed.or(fn(_: EventContext) {})
-  mut ul_style = 0
-  if underline.or(false) { ul_style = 1 }
-  _span(text, attrs.or(TextAttrs{}).to_int(),
-    vaxis::color_to_int(fg.or(vaxis::COLOR_DEFAULT)),
-    vaxis::color_to_int(bg.or(vaxis::COLOR_DEFAULT)),
-    ul_style, hyperlink.or(""),
-    on_pressed.is_some(),
-    fn(c: EventContextHandle) { cb(EventContext{handle: c}) })
-}
-
-fn rich_text(spans: [TextSpan], soft_wrap: Bool?) Widget {
-  mut sw = false
-  match soft_wrap {
-    v => {
-      sw = v
-    },
-    _ => {},
-  }
-  _rich_text(spans, sw)
-}
-
-// ── Basic widgets ─────────────────────────────────────────────────────
-
-extern fn _text(
-  value: Str, soft_wrap: Bool, align: Int, overflow: Int, max_lines: Int,
-  has_on_pressed: Bool, on_pressed: fn(EventContextHandle), click_affordance: Int,
-) Widget = "UiText"
-extern fn _button(label: Str, on_pressed: fn(EventContextHandle)) Widget = "UiButton"
-extern fn _styled_text(
-  value: Str, fg: Int, bg: Int, ul_color: Int, ul_style: Int, attrs: Int,
-  has_on_pressed: Bool, on_pressed: fn(EventContextHandle), click_affordance: Int,
-) Widget = "UiStyledText"
-
+// Text layout enums are declared up here so rich_text() below can take
+// optional `overflow` and `max_lines` arguments. plain text() down in the
+// "Basic widgets" section uses the same enums.
 enum TextAlign { start, end, left, right, center }
 
 impl TextAlign {
@@ -778,6 +735,54 @@ impl TextOverflow {
     }
   }
 }
+
+extern type TextSpan = "ffi.UiTextSpan"
+
+extern fn _rich_text(
+  spans: [TextSpan], soft_wrap: Bool, overflow: Int, max_lines: Int,
+) Widget = "UiRichText"
+extern fn _span(
+  text: Str, attrs: Int, fg: Int, bg: Int, ul_style: Int,
+  hyperlink: Str, has_on_pressed: Bool, on_pressed: fn(EventContextHandle),
+) TextSpan = "UiMakeSpan"
+
+fn span(
+  text: Str, attrs: TextAttrs?, fg: vaxis::Color?, bg: vaxis::Color?,
+  underline: Bool?, hyperlink: Str?, on_pressed: fn(EventContext)?,
+) TextSpan {
+  let cb = on_pressed.or(fn(_: EventContext) {})
+  mut ul_style = 0
+  if underline.or(false) { ul_style = 1 }
+  _span(text, attrs.or(TextAttrs{}).to_int(),
+    vaxis::color_to_int(fg.or(vaxis::COLOR_DEFAULT)),
+    vaxis::color_to_int(bg.or(vaxis::COLOR_DEFAULT)),
+    ul_style, hyperlink.or(""),
+    on_pressed.is_some(),
+    fn(c: EventContextHandle) { cb(EventContext{handle: c}) })
+}
+
+fn rich_text(
+  spans: [TextSpan], soft_wrap: Bool?, overflow: TextOverflow?, max_lines: Int?,
+) Widget {
+  _rich_text(
+    spans,
+    soft_wrap.or(false),
+    overflow.or(TextOverflow::clip).to_int(),
+    max_lines.or(0),
+  )
+}
+
+// ── Basic widgets ─────────────────────────────────────────────────────
+
+extern fn _text(
+  value: Str, soft_wrap: Bool, align: Int, overflow: Int, max_lines: Int,
+  has_on_pressed: Bool, on_pressed: fn(EventContextHandle), click_affordance: Int,
+) Widget = "UiText"
+extern fn _button(label: Str, on_pressed: fn(EventContextHandle)) Widget = "UiButton"
+extern fn _styled_text(
+  value: Str, fg: Int, bg: Int, ul_color: Int, ul_style: Int, attrs: Int,
+  has_on_pressed: Bool, on_pressed: fn(EventContextHandle), click_affordance: Int,
+) Widget = "UiStyledText"
 
 // Controls the visual affordance added when a Text widget has an on_pressed
 // callback. Mirrors upstream `ui.ClickAffordance`.

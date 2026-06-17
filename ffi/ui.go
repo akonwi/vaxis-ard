@@ -545,7 +545,7 @@ type UiTextSpan struct {
 	OnPressed                       func(ui.EventContext)
 }
 
-func UiRichText(spans []UiTextSpan, softWrap bool) ui.Widget {
+func UiRichText(spans []UiTextSpan, softWrap bool, overflow, maxLines int) ui.Widget {
 	s := make([]ui.TextSpan, len(spans))
 	for i, sp := range spans {
 		style := decodeUiStyle(sp.Fg, sp.Bg, sp.UlColor, sp.UlStyle, sp.Attrs)
@@ -557,7 +557,12 @@ func UiRichText(spans []UiTextSpan, softWrap bool) ui.Widget {
 			s[i].OnPressed = sp.OnPressed
 		}
 	}
-	return ui.RichText{Spans: s, SoftWrap: softWrap}
+	return ui.RichText{
+		Spans:    s,
+		SoftWrap: softWrap,
+		Overflow: ui.TextOverflow(overflow),
+		MaxLines: maxLines,
+	}
 }
 
 func UiMakeSpan(
