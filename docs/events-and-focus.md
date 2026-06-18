@@ -143,6 +143,62 @@ This is why inner `Actions` can "intercept" an upstream intent
 (see §5). It's also why placement of `Actions` matters: it must be on
 the ancestor chain of whatever widget actually holds focus.
 
+### Pitfall: conditional handlers can't "forward" with `Ignored`
+
+A tempting pattern when an inner subtree wants to handle an intent
+in one state and let an outer `Actions` handle it in another:
+
+```ard
+ui::action("vaxis.dismiss", fn(ctx, _intent) {
+  if model.compose_open {
+    // close compose
+    ui::EventResult::handled
+  } else {
+    ui::EventResult::ignored   // "forward" to the outer handler
+  }
+})
+```
+
+**This doesn't work.** Per the rule above, the closer `Actions`
+is still "found" — `Invoke` runs the handler, returns `Ignored`,
+and stops. The outer `Actions` (e.g. one at the screen / app shell
+level that closes the active tab on Esc) is never consulted.
+
+Symptom: the key works in the conditional branch (compose closes)
+but silently does nothing in the other branch (tab doesn't close).
+
+### Fix: register the binding conditionally
+
+Build the `Actions` bindings list dynamically and only include the
+intent handler when this subtree actually wants to handle it:
+
+```ard
+mut bindings: [ui::ActionBinding] = [
+  ui::action("detail.scroll_up", …),
+  ui::action("detail.scroll_down", …),
+  // …always-on bindings…
+]
+if model.compose_open {
+  bindings.push(ui::action("vaxis.dismiss", fn(ctx, _intent) {
+    // close compose
+    ui::EventResult::handled
+  }))
+}
+ui::shortcuts(
+  ui::actions(child, bindings),
+  ["…": "…"],
+)
+```
+
+When `compose_open` is false, no `vaxis.dismiss` binding exists at
+this layer. `Invoke` keeps walking up the ancestor chain and finds
+the outer handler that closes the tab. When `compose_open` is true,
+the binding is registered and runs.
+
+This works because `actions(intent)` returns `(handler, false)`
+when the intent isn't in the bindings map — the walk only stops
+when a binding exists, not when an `Actions` widget exists.
+
 ---
 
 ## 5. Pitfall: inner `Shortcuts` cannot rebind `Tab` / `Shift+Tab` / `Escape`
@@ -323,7 +379,10 @@ When a key isn't doing what you expect, work the list:
 4. **Is your `Actions` on the ancestor chain of the focused
    element?** If not, `ctx.Invoke` will never visit it.
 5. **Did a closer `Actions` return `Ignored`?** Closer wins even when
-   it ignores — your further-out handler will never be tried.
+   it ignores — your further-out handler will never be tried. If you
+   need conditional handling, register the binding conditionally
+   instead. See §4 ("Pitfall: conditional handlers can't 'forward'
+   with `Ignored`").
 6. **Phase confusion**: there is none in `Shortcuts` / `Actions`.
    They run in every phase. The "outer wins" effect comes purely from
    capture descending from the root.
@@ -522,6 +581,10 @@ target is the one inside the logged-in scope. `focus_scope` with
 
 ## Changelog
 
+- 2025-XX: documented the "conditional handler / Ignored doesn't
+  forward" pitfall in §4 and pointed checklist item 5 to the fix
+  (build the bindings list dynamically; omit the binding when this
+  layer shouldn't handle it).
 - 2025-XX: added §9 on focus restoration after unmount — the
   built-in `pendingFocusFallback` mechanism, when it suffices,
   why nested handler layers need `reclaim_focus`, and the failure
