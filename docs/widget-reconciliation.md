@@ -250,6 +250,32 @@ updates but the screen doesn't," stop and check this first:
 
 If yes to both, you're hitting this bug. Don't debug dispatch.
 
+### Sibling bug: stale widget config in `ui::stateful` (FIXED)
+
+The same "state changes but nothing happens" symptom had a totally
+different root cause hiding in `uiStatefulState` (`ffi/ui.go`). The
+state object cached the widget at `CreateState` time and never
+refreshed it. Subsequent rebuilds called `s.widget.Build(...)` —
+the ORIGINAL closure, with the ORIGINAL captured locals.
+
+For any parameter the parent passes into `ui::stateful::new(...)`
+that the `build:` closure reads (an `active: Bool` flag, an api
+key, an `on_open` callback, etc.), the stateful subtree saw the
+value captured at first mount and never anything else. Reads from
+`ui::stateful`'s own `state` value did update normally because
+that goes through `state.value()` / `state.set(...)`, which are
+backed by the live `UiStateContext`, not the widget closure.
+
+Fixed by reading `s.StateBase.Widget().(uiStateful[T])` on every
+Build instead of using a cached field. If you ever revisit the FFI:
+**don't cache widget references on the State** — always read
+`StateBase.Widget()` so widget updates propagate.
+
+Surfaced in tinear when only one inner tab view’s focus_scope
+responded to keys after a tab change; the `active` flag was frozen
+at first mount. If you see a parent-supplied param appearing stale
+inside a stateful subtree, suspect this class of bug first.
+
 ## Workarounds you can use today
 
 1. **Wrap conditional branches in the same outer widget type.**
@@ -283,6 +309,13 @@ If yes to both, you're hitting this bug. Don't debug dispatch.
 ---
 
 ## Changelog
+
+- 2025-XX: documented the stale-widget-in-`ui::stateful` FFI bug
+  (also fixed in this change). Same "state updates but nothing
+  happens" symptom, totally different root cause: `uiStatefulState`
+  cached the widget at `CreateState` and kept running the original
+  build closure. Always read `StateBase.Widget()` instead.
+
 
 - 2025-XX: added the "Misdiagnosis trap" section after tinear hit
   this a second time on the issue detail view. Recorded that the

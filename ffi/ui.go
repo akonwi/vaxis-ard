@@ -144,26 +144,32 @@ type uiStateful[T any] struct {
 func (w uiStateful[T]) WidgetKey() ui.KeyValue { return ui.KeyValue(w.Key) }
 
 func (w uiStateful[T]) CreateState() ui.State {
-	s := &uiStatefulState[T]{widget: w, state: &UiStateContext{}}
-	return s
+	return &uiStatefulState[T]{state: &UiStateContext{}}
 }
 
 type uiStatefulState[T any] struct {
 	ui.StateBase
-	widget uiStateful[T]
-	state  *UiStateContext
+	state *UiStateContext
 }
 
+// Build reads the CURRENT widget configuration from StateBase, not
+// from a cached field. The parent can pass an updated widget (e.g.
+// a closure capturing a new `active` flag) and we must run that new
+// closure on rebuild, not the one captured at CreateState time.
+// Caching the widget in our own struct field was the source of a
+// real bug: stateful subtrees kept executing the closure they were
+// born with even after the parent rebuilt them with a new one.
 func (s *uiStatefulState[T]) Build(ctx ui.BuildContext) ui.Widget {
+	w := s.StateBase.Widget().(uiStateful[T])
 	// Wire up rebuild trigger and state base once the element is attached.
 	if s.state.markNeedsBuild == nil {
 		s.state.markNeedsBuild = s.MarkNeedsBuild
 		s.state.sb = &s.StateBase
 	}
 	if s.state.Value == nil {
-		s.state.Value = s.widget.Init(ctx, s.state)
+		s.state.Value = w.Init(ctx, s.state)
 	}
-	return s.widget.Build(ctx, s.state)
+	return w.Build(ctx, s.state)
 }
 
 func (s *uiStatefulState[T]) Dispose() {
