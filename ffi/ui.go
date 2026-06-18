@@ -225,8 +225,13 @@ func UiFocus(child ui.Widget) ui.Widget {
 	return ui.Focus(nil, child)
 }
 
-func UiFocusScope(child ui.Widget, trap, autoFocus bool) ui.Widget {
-	return ui.FocusScope{Trap: trap, AutoFocus: autoFocus, Child: child}
+func UiFocusScope(child ui.Widget, trap, autoFocus, reclaimFocus bool) ui.Widget {
+	return ui.FocusScope{
+		Trap:         trap,
+		AutoFocus:    autoFocus,
+		ReclaimFocus: reclaimFocus,
+		Child:        child,
+	}
 }
 
 // ─── Divider ──────────────────────────────────────────────────────────

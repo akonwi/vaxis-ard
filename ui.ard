@@ -1098,10 +1098,27 @@ fn shortcuts(child: Widget, bindings: [Str:Str]) Widget { _shortcuts(child, bind
 // ── Focus ─────────────────────────────────────────────────────────────
 
 extern fn _focus(child: Widget) Widget = "UiFocus"
-extern fn _focus_scope(child: Widget, trap: Bool, auto_focus: Bool) Widget = "UiFocusScope"
+extern fn _focus_scope(
+  child: Widget, trap: Bool, auto_focus: Bool, reclaim_focus: Bool,
+) Widget = "UiFocusScope"
 
 fn focus(child: Widget) Widget { _focus(child) }
-fn focus_scope(child: Widget, trap: Bool, auto_focus: Bool) Widget { _focus_scope(child, trap, auto_focus) }
+
+// `trap`         keeps Tab traversal inside child while focus is inside.
+// `auto_focus`   moves focus to the first descendant focus target on
+//                mount when focus is outside the scope.
+// `reclaim_focus` re-runs the auto_focus pass on every rebuild whenever
+//                 focus is outside the scope. Useful when the focused
+//                 element can be disposed mid-life (e.g. the modal's
+//                 child swaps from a loading view to a real body) so
+//                 focus snaps back into the scope instead of being
+//                 lost. Defaults to false to match the previous
+//                 behaviour; matches upstream FocusScope.ReclaimFocus.
+fn focus_scope(
+  child: Widget, trap: Bool, auto_focus: Bool, reclaim_focus: Bool?,
+) Widget {
+  _focus_scope(child, trap, auto_focus, reclaim_focus.or(false))
+}
 
 // ── Stateful widget ───────────────────────────────────────────────────
 

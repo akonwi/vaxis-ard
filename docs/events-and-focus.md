@@ -239,7 +239,7 @@ matters, and stale focus state from an earlier subtree can defeat it.
 `ui::focus(...)` does **not** scope or trap focus. Tab traversal walks
 through every focus target in the app, in registration order.
 
-### `ui::focus_scope(child, trap, auto_focus)`
+### `ui::focus_scope(child, trap, auto_focus, reclaim_focus?)`
 
 A *scope* around a region of the tree. Not itself a focus target;
 needs `ui::focus(...)` widgets inside it.
@@ -247,8 +247,9 @@ needs `ui::focus(...)` widgets inside it.
 ```ard
 ui::focus_scope(
   ui::focus(inner),
-  trap: true,        // keep Tab traversal inside this subtree
-  auto_focus: true,  // pull focus into the scope when it mounts
+  trap: true,           // keep Tab traversal inside this subtree
+  auto_focus: true,     // pull focus into the scope when it mounts
+  reclaim_focus: true,  // re-pull on every rebuild while focus is outside
 )
 ```
 
@@ -258,6 +259,12 @@ ui::focus_scope(
   field that just unmounted).
 - `trap: true` keeps `Tab` / `Shift+Tab` cycling inside the scope.
   Useful for modal dialogs and overlay surfaces.
+- `reclaim_focus: true` re-runs the auto_focus pass on every rebuild
+  whenever focus is currently outside the scope. Without it,
+  `auto_focus` only ever fires once. The flag matters specifically
+  when the focused element may be **disposed mid-life** — see §10.
+  Defaults to `false` (omit the argument). Mirrors
+  `FocusScope.ReclaimFocus` upstream.
 
 ### Pitfall: an outer `ui::focus` steals focus from an inner subtree
 
@@ -320,10 +327,163 @@ When a key isn't doing what you expect, work the list:
 6. **Phase confusion**: there is none in `Shortcuts` / `Actions`.
    They run in every phase. The "outer wins" effect comes purely from
    capture descending from the root.
+7. **Did a focused widget just unmount?** (modal dismissed, dynamic
+   tab closed, list item removed.) Symptom: "first keypress after
+   dismiss does nothing" or "nothing responds." See §9.
 
 ---
 
-## 9. Worked example
+## 9. Focus restoration after a focused widget unmounts
+
+When the currently-focused element is removed from the tree (modal
+closed, dynamic tab dismissed, list pruned, screen swapped), focus
+has to go *somewhere*. Two mechanisms handle this. Understanding both
+is the difference between "first keypress is lost" / "nothing
+responds" and "it just works."
+
+### Mechanism A: vaxis's built-in `pendingFocusFallback`
+
+In `vaxis/ui/app.go`, when `unregisterFocusTarget` runs *during a
+build* (which is when modal closes happen — a state change triggers
+the rebuild that unmounts the modal subtree), it saves the disposed
+element's index, debug ID, and label, then sets
+`pendingFocusFallback = true`:
+
+```go
+if a.build.building {
+    a.pendingFocusFallback = true
+    a.pendingFocusFallbackIndex = removed
+    a.pendingFocusFallbackID    = id
+    a.pendingFocusFallbackLabel = label
+    return
+}
+```
+
+At the end of `BuildScope()`, `resolvePendingFocusFallback()` tries
+(in order) to focus:
+
+1. a remaining focusable with the same debug **ID**,
+2. a remaining focusable with the same debug **label**,
+3. the focusable at the disposed element's **index** (clamped to the
+   valid range).
+
+For upstream `Dialog` / `CommandPalette`, step 3 typically lands on a
+sensible neighbour — frequently the focusable that opened the modal
+(e.g. the button that was right before the dialog in registration
+order). That neighbour's `Actions` / `Shortcuts` ancestor chain is the
+same one that was handling keys before the modal opened, so
+navigation "just works" after dismiss.
+
+The demo (`examples/demo.ard`) relies entirely on this mechanism for
+dialog dismissal. It never adds `reclaim_focus` to anything in its
+own subtree.
+
+### Mechanism B: `ReclaimFocus` on a `FocusScope` you own
+
+If the index-based fallback is unreliable for your layout (see
+pitfalls below), you can put a `focus_scope(..., reclaim_focus: true)`
+around a *specific* subtree and it will explicitly pull focus back
+into that subtree on the same build cycle. It beats
+`resolvePendingFocusFallback` to the punch — `focusFirstWithin` sets
+the focused element, so the late fallback sees
+`focused.element != nil` and no-ops.
+
+Upstream `Dialog` already uses this internally:
+
+```go
+// vaxis/ui/dialog.go
+Child: FocusScope{
+    Trap:         true,
+    AutoFocus:    true,
+    ReclaimFocus: !w.DisableFocusReclaim,   // true by default
+    Child:        ...
+},
+```
+
+That's why focus moves *into* a dialog on open and stays trapped
+there even across rebuilds — you don't have to do anything.
+
+### When the index fallback isn't enough
+
+The fallback picks *some* remaining focusable. For it to be useful,
+events from that focusable must bubble through the **right**
+`Actions` / `Shortcuts` chain (the one that handles the keys you
+care about). Two common patterns break this:
+
+1. **Nested `Shortcuts` / `Actions` layers.** When different
+   subtrees install handlers for different intents (e.g. a board
+   view binds `j`/`k`/`s`/`y` only when focus is inside the board
+   subtree), the fallback landing on a sibling focusable (a tab
+   chip, a focusable in an inactive tab subtree, etc.) means events
+   bubble through *its* ancestors and never reach the board's
+   handlers.
+
+2. **Outer `ui::focus(...)` wrappers sitting above the handler
+   layers** (e.g. wrapping a top-level screen in `ui::focus(...)` so
+   `focus_scope`'s `auto_focus` always has a target). These are
+   tree-order-early focusables; the index fallback can land on them,
+   and events from them bubble up *past* the inner shortcuts you
+   meant to fire.
+
+In both cases the symptom looks like "first nav press after dismiss
+does nothing" (the fallback landed somewhere your handlers don't see)
+or "nothing responds at all" (a higher reclaim_focus pinned focus on
+an even less useful target). The fix is mechanism B: put
+`reclaim_focus: true` on the **innermost scope whose handlers should
+fire** after the dismiss. That scope's rebuild explicitly snaps focus
+back into its own subtree, so events bubble through the right chain.
+
+### Don't add `reclaim_focus` to every scope
+
+It's tempting to slap `reclaim_focus: true` on every nested
+`focus_scope` just in case. Don't — it has a real failure mode.
+
+`reclaim_focus` fires on every rebuild whenever `focusedWithin` is
+false. If you have two sibling scopes (e.g. two tabs kept mounted by
+`indexed_stack`), both with `reclaim_focus: true`, and focus is
+currently in scope A:
+
+- Scope B's rebuild: `focusedWithin(B) = false` → runs
+  `focusFirstWithin(B)` → focus moves to B.
+- Scope A's rebuild: `focusedWithin(A) = false` (it's now in B) →
+  runs `focusFirstWithin(A)` → focus moves back to A.
+
+The two scopes fight every frame. The "winner" is whichever rebuilds
+last in the cycle, which is brittle and tree-order-dependent.
+
+Rules of thumb:
+
+- Add `reclaim_focus: true` to the scope of the **screen / view that
+  owns the modal flow**. That's the scope that should regain focus
+  after dismiss.
+- Don't add it to inactive sibling scopes. They'll either grab focus
+  unexpectedly or fight the active one.
+- If multiple views can open modals, model focus restoration
+  explicitly (e.g. save the previously-focused node via a `FocusNode`
+  binding and re-focus on dismiss) rather than relying on multiple
+  reclaim_focus scopes.
+
+### Concrete recipe for a custom modal
+
+1. The modal *frame* widget wraps its content in
+   `focus_scope(trap: true, auto_focus: true, reclaim_focus: true)`.
+   (`reclaim_focus` covers the case where the body subtree swaps
+   mid-flight, e.g. a loading view replaced by the real picker — the
+   loading-side focusable disposes, focus would be lost without
+   reclaim.)
+2. The frame does **not** wrap the caller's body in `ui::focus(...)`.
+   That would put the focusable *above* whatever `Shortcuts` /
+   `Actions` the body installs, and events would bubble past them.
+   The caller's body must bring its own focusable inside its own
+   handler layers.
+3. The *view that opens the modal* uses
+   `focus_scope(..., reclaim_focus: true)` around its body so focus
+   snaps back into the view's subtree after dismiss — without
+   relying on the index-based fallback to land somewhere useful.
+
+---
+
+## 10. Worked example
 
 The minimal logged-in shell in `tinear/tui/logged_in_screen.ard` ended
 up at this structure after working through every item above:
@@ -362,6 +522,12 @@ target is the one inside the logged-in scope. `focus_scope` with
 
 ## Changelog
 
+- 2025-XX: added §9 on focus restoration after unmount — the
+  built-in `pendingFocusFallback` mechanism, when it suffices,
+  why nested handler layers need `reclaim_focus`, and the failure
+  mode of putting `reclaim_focus: true` on every scope. Updated
+  `ui::focus_scope` signature in §6 to include the new
+  `reclaim_focus` parameter.
 - 2025-04: initial doc capturing the event/focus/intent model and the
   "inner `Shortcuts` can't override `Tab`" pitfall surfaced during the
   tinear logged-in shell rewrite.
