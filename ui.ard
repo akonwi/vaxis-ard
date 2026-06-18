@@ -1052,7 +1052,18 @@ extern fn _sliver_list(children: [Widget]) Widget = "UiSliverList"
 extern fn _sliver_list_builder(
   count: Int, item_extent: Int, estimated_item_extent: Int, overscan: Int,
   builder: fn(BuildContextHandle, Int) Widget,
+  has_controller: Bool, controller: SliverListController,
 ) Widget = "UiSliverListBuilder"
+
+extern type SliverListController = "*ui.SliverListController"
+extern fn _sliver_list_controller() SliverListController = "UiSliverListController"
+extern fn _sliver_list_controller_reveal_index(
+  c: SliverListController, index: Int,
+) Bool = "UiSliverListControllerRevealIndex"
+extern fn _sliver_list_controller_scroll_to_index(
+  c: SliverListController, index: Int, align: Int,
+) Bool = "UiSliverListControllerScrollToIndex"
+extern fn _scroll_controller_metrics(c: ScrollController) [Int] = "UiScrollControllerMetrics"
 
 fn scroll_controller() ScrollController { _scroll_controller() }
 fn scroll_controller_scroll_by_lines(c: ScrollController, lines: Int) Bool { _scroll_controller_scroll_by_lines(c, lines) }
@@ -1069,12 +1080,46 @@ fn sliver_pinned_header(child: Widget) Widget { _sliver_pinned_header(child) }
 fn sliver_fill_remaining(child: Widget) Widget { _sliver_fill_remaining(child) }
 fn sliver_list(children: [Widget]) Widget { _sliver_list(children) }
 
+// `controller` is optional; pass one to drive the list with
+// reveal_index / scroll_to_index after it mounts.
 fn sliver_list_builder(
   count: Int, builder: fn(BuildContext, Int) Widget,
   item_extent: Int?, estimated_item_extent: Int?, overscan: Int?,
+  controller: SliverListController?,
 ) Widget {
-  _sliver_list_builder(count, item_extent.or(0), estimated_item_extent.or(0), overscan.or(0),
-    fn(ctx: BuildContextHandle, i: Int) Widget { builder(BuildContext{handle: ctx}, i) })
+  let has_controller = controller.is_some()
+  let c = controller.or(_sliver_list_controller())
+  _sliver_list_builder(
+    count, item_extent.or(0), estimated_item_extent.or(0), overscan.or(0),
+    fn(ctx: BuildContextHandle, i: Int) Widget { builder(BuildContext{handle: ctx}, i) },
+    has_controller, c,
+  )
+}
+
+fn sliver_list_controller() SliverListController { _sliver_list_controller() }
+
+fn sliver_list_controller_reveal_index(
+  c: SliverListController, index: Int,
+) Bool { _sliver_list_controller_reveal_index(c, index) }
+
+// `align` is one of:
+//   0 = start  (top of viewport)
+//   1 = center
+//   2 = end    (bottom of viewport)
+fn sliver_list_controller_scroll_to_index(
+  c: SliverListController, index: Int, align: Int,
+) Bool { _sliver_list_controller_scroll_to_index(c, index, align) }
+
+fn scroll_controller_metrics(controller: ScrollController) ScrollMetrics {
+  let arr = _scroll_controller_metrics(controller)
+  ScrollMetrics{
+    scroll_offset: arr.at(0),
+    max_scroll_offset: arr.at(1),
+    viewport_width: arr.at(2),
+    viewport_height: arr.at(3),
+    content_width: arr.at(4),
+    content_height: arr.at(5),
+  }
 }
 
 // ── Actions ───────────────────────────────────────────────────────────

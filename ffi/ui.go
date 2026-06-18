@@ -661,6 +661,36 @@ func UiScrollControllerScrollToEnd(controller *ui.ScrollController) bool {
 	return controller.ScrollToEnd()
 }
 
+// UiScrollControllerMetrics flattens ScrollMetrics into a fixed-shape
+// int slice (same order as UiScrollPaneMetrics). ScrollController is
+// single-axis, so there's no axis parameter — metrics are for the
+// scroll_view's configured axis.
+func UiScrollControllerMetrics(controller *ui.ScrollController) []int {
+	m := controller.Metrics()
+	return []int{
+		m.ScrollOffset, m.MaxScrollOffset,
+		m.ViewportWidth, m.ViewportHeight,
+		m.ContentWidth, m.ContentHeight,
+	}
+}
+
+func UiSliverListController() *ui.SliverListController {
+	return &ui.SliverListController{}
+}
+
+// UiSliverListControllerRevealIndex scrolls the controlled
+// SliverListBuilder just enough to bring `index` into view. Returns
+// false if the controller isn't attached or no scroll was needed.
+func UiSliverListControllerRevealIndex(controller *ui.SliverListController, index int) bool {
+	return controller.RevealIndex(index)
+}
+
+// UiSliverListControllerScrollToIndex scrolls to `index` aligning it
+// per `align`: 0 = start, 1 = center, 2 = end.
+func UiSliverListControllerScrollToIndex(controller *ui.SliverListController, index, align int) bool {
+	return controller.ScrollToIndex(index, ui.ScrollAlign(align))
+}
+
 func UiCustomScrollView(controller *ui.ScrollController, slivers []ui.Widget, followOutput bool) ui.Widget {
 	return ui.CustomScrollView{Controller: controller, Slivers: slivers, FollowOutput: followOutput}
 }
@@ -685,11 +715,19 @@ func UiSliverList(children []ui.Widget) ui.Widget {
 // EstimatedItemExtent are mutually exclusive in practice: set one or the
 // other (or neither, for a default). Passing 0 leaves the field at its
 // vaxis zero value.
+//
+// `hasController` toggles whether `controller` is attached; when false
+// we pass nil to upstream so the builder runs uncontrolled.
 func UiSliverListBuilder(
 	count, itemExtent, estimatedItemExtent, overscan int,
 	builder func(ui.BuildContext, int) ui.Widget,
+	hasController bool, controller *ui.SliverListController,
 ) ui.Widget {
+	if !hasController {
+		controller = nil
+	}
 	return ui.SliverListBuilder{
+		Controller:          controller,
 		Count:               count,
 		ItemExtent:          itemExtent,
 		EstimatedItemExtent: estimatedItemExtent,
