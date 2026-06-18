@@ -217,6 +217,39 @@ clean upstream issue is filed we'll link it here.
 
 ---
 
+## Misdiagnosis trap
+
+This bug presents as "state is updating but the screen never
+changes." Because the build closure DOES re-run with fresh state and
+the new widget IS constructed, the natural assumption is that
+something went wrong on the dispatch/state path — not in painting.
+
+Tinear hit this twice and burned several rounds chasing the wrong
+layer both times:
+
+1. The inbox view's initial fetch was moved out of `init` into
+   `build` with a comment claiming "cross-module monomorphization
+   issues we'd hit if we did it from `init`." That was wrong:
+   `init` dispatches were never broken. The real bug was the
+   inbox's body returning `ui::center(…)` while loading and
+   `ui::column(…)` once loaded — a type swap at the same slot.
+   The `init` workaround happened to coincide with another shape
+   change that masked the symptom.
+2. The issue detail view repeated the pattern (`ui::center` for
+   loading, `ui::column` for loaded). Adding debug toasts confirmed
+   every step of the dispatch ran. The fix was wrapping the
+   conditional in a stable outer widget, not touching the dispatch.
+
+If you find yourself adding probes to a load callback because "state
+updates but the screen doesn't," stop and check this first:
+
+- Does the build closure return DIFFERENT outer widget types across
+  the state transition?
+- Are you nested in at least one ancestor `renderObjectElement`
+  (any `column`, `row`, `padding`, `decorated_box`, etc.)?
+
+If yes to both, you're hitting this bug. Don't debug dispatch.
+
 ## Workarounds you can use today
 
 1. **Wrap conditional branches in the same outer widget type.**
@@ -251,6 +284,10 @@ clean upstream issue is filed we'll link it here.
 
 ## Changelog
 
+- 2025-XX: added the "Misdiagnosis trap" section after tinear hit
+  this a second time on the issue detail view. Recorded that the
+  inbox view's `init`-vs-`build` workaround was the wrong fix for
+  the same bug, so we don't perpetuate the misdiagnosis.
 - 2025-04: initial entry written after reproducing the issue in
   tinear's inbox view. Reproducer landed at
   `examples/reconcile_bug.ard`.
