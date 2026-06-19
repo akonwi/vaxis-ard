@@ -215,6 +215,7 @@ fn provider_theme(theme: Theme, child: Widget) Widget { _provider_theme(_theme_t
 
 extern type ThemeSetHandle = "ffi.UiThemeSet"
 extern fn _default_theme_set() ThemeSetHandle = "UiThemeSetDefault"
+extern fn _theme_set_make(light: ThemeHandle, dark: ThemeHandle) ThemeSetHandle = "UiThemeSetMake"
 
 struct ThemeSet {
   handle: ThemeSetHandle,
@@ -222,6 +223,16 @@ struct ThemeSet {
 
 fn default_theme_set() ThemeSet {
   ThemeSet{ handle: _default_theme_set() }
+}
+
+// Build a custom ThemeSet from explicit light and dark themes.
+// Useful when you want to override what the terminal reports —
+// e.g. passing `dark` for BOTH slots forces the dark theme
+// regardless of `ColorThemeUpdate` events from the terminal.
+fn theme_set(light: Theme, dark: Theme) ThemeSet {
+  ThemeSet{
+    handle: _theme_set_make(_theme_to_handle(light), _theme_to_handle(dark)),
+  }
 }
 
 fn run(root: Widget, theme_set: ThemeSet?) {

@@ -939,6 +939,14 @@ func UiThemeSetDefault() UiThemeSet {
 	return UiThemeSet{Set: ui.DefaultThemeSet()}
 }
 
+// UiThemeSetMake constructs a ThemeSet from explicit light + dark
+// themes. Lets callers replace either variant — e.g. passing the
+// dark theme for both slots to force dark rendering regardless of
+// ColorThemeUpdate events from the terminal.
+func UiThemeSetMake(light UiTheme, dark UiTheme) UiThemeSet {
+	return UiThemeSet{Set: ui.ThemeSet{Light: light.Theme, Dark: dark.Theme}}
+}
+
 // ─── Animation helpers ───────────────────────────────────────────────
 
 func decodeUiStyle(fg, bg, ulColor, ulStyle, attrs int) vaxis.Style {
